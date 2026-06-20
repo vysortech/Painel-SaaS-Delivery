@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Save, Bot, Key, DollarSign, Database } from 'lucide-react';
+import { Save, Bot, Key, Database } from 'lucide-react';
 
 export default function Settings() {
   const [formData, setFormData] = useState({

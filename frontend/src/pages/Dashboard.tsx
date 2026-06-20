@@ -1,4 +1,3 @@
-import React from 'react';
 import axios from 'axios';
 import useSWR from 'swr';
 import { Activity, DollarSign, Users, Database, TrendingUp, AlertTriangle, Zap, ArrowUpRight, ArrowDownRight } from 'lucide-react';

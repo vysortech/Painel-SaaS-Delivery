@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import useSWR from 'swr';
-import { Plus, Settings, Power, Trash2, Database, Bot, CreditCard, Clock, X, Save, Search, Filter, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Plus, Settings, Power, Trash2, Bot, CreditCard, Clock, X, Save, Search, CheckCircle2, AlertCircle } from 'lucide-react';
 
 const fetcher = (url: string) => axios.get(url).then(res => res.data);
 
