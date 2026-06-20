@@ -2,8 +2,7 @@ version: '3.8'
 
 services:
   saas-panel:
-    build: .
-    image: painel-saas-delivery-saas-panel:latest
+    image: ghcr.io/vysortech/painel-saas-delivery:latest
     environment:
       - PORT=4000
       - DB_HOST=postgres
