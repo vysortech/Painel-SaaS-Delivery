@@ -17,10 +17,11 @@ services:
       - EVOLUTION_API_KEY=X8G9W2M4V5N7B3L1K6J0H9P2Y3T5C8F1
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=minha_rede"
       - "traefik.http.routers.saaspanel.rule=Host(`food.vysortech.app.br`)"
       - "traefik.http.routers.saaspanel.entrypoints=websecure"
-      - "traefik.http.routers.saaspanel.tls=true"
-      - "traefik.http.routers.saaspanel.tls.certresolver=letsencrypt" # Mude se o seu resolver no Traefik tiver outro nome
+      - "traefik.http.routers.saaspanel.tls.certresolver=letsencryptresolver"
+      - "traefik.http.routers.saaspanel.service=saaspanel"
       - "traefik.http.services.saaspanel.loadbalancer.server.port=4000"
     networks:
       - minha_rede
