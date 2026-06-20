@@ -7,6 +7,7 @@ import analyticsRoutes from './routes/analytics';
 import alertsRoutes from './routes/alerts';
 import settingsRoutes from './routes/settings';
 import evolutionRoutes from './routes/evolution';
+import publicConnectRoutes from './routes/public_connect';
 import { startBillingCron } from './cron/billing';
 import path from 'path';
 import fs from 'fs';
@@ -25,6 +26,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/alerts', alertsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/evolution', evolutionRoutes);
+app.use('/api/public/whatsapp', publicConnectRoutes);
 
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', service: 'saas-panel-api-v3' });

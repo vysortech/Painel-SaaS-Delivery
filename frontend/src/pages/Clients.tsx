@@ -236,6 +236,17 @@ export default function Clients() {
                 <td className="p-4">
                   <div className="font-bold text-white text-base">{tenant.nome_empresa}</div>
                   <div className="text-xs text-blue-400 font-mono mt-1">{tenant.instancia}</div>
+                  <div className="mt-2">
+                    {tenant.status_conexao === 'CONNECTED' ? (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">
+                            🟢 Conectado
+                        </span>
+                    ) : (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20 uppercase tracking-wider">
+                            🔴 Desconectado
+                        </span>
+                    )}
+                  </div>
                 </td>
                 <td className="p-4">
                   <span className={`px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1
@@ -257,7 +268,8 @@ export default function Clients() {
                 <td className="p-4 text-right">
                   <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}/conectar/${tenant.instancia}`);
+                        const token = tenant.connect_token || tenant.instancia;
+                        navigator.clipboard.writeText(`${window.location.origin}/conectar/${token}`);
                         showToast('Link de conexão copiado!', 'success');
                     }} title="Copiar Link do QR Code" className="p-2 text-indigo-400 hover:bg-indigo-500/20 rounded">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>

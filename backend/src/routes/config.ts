@@ -23,6 +23,8 @@ pool.query(`
   ALTER TABLE configuracoes ADD COLUMN IF NOT EXISTS plano_tipo VARCHAR(50) DEFAULT 'recorrente';
   ALTER TABLE configuracoes ADD COLUMN IF NOT EXISTS contexto_loja TEXT DEFAULT '';
   ALTER TABLE configuracoes ADD COLUMN IF NOT EXISTS dias_carencia INT DEFAULT 0;
+  ALTER TABLE configuracoes ADD COLUMN IF NOT EXISTS connect_token VARCHAR(255);
+  ALTER TABLE configuracoes ADD COLUMN IF NOT EXISTS status_conexao VARCHAR(50) DEFAULT 'PENDING';
 `).catch(console.error);
 
 // Tenta remover a constraint NOT NULL da coluna chave separadamente, pois se ela não existir, o erro será ignorado sem quebrar o resto.
@@ -34,6 +36,17 @@ pool.query(`ALTER TABLE configuracoes ALTER COLUMN valor DROP NOT NULL;`).catch(
 router.get('/', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM configuracoes ORDER BY instancia ASC');
+        const crypto = require('crypto');
+        
+        // Auto-generate tokens for legacy instances
+        for (const row of result.rows) {
+            if (!row.connect_token) {
+                const token = crypto.randomBytes(16).toString('hex');
+                await pool.query('UPDATE configuracoes SET connect_token = $1, status_conexao = $2 WHERE instancia = $3', [token, 'PENDING', row.instancia]);
+                row.connect_token = token;
+                row.status_conexao = 'PENDING';
+            }
+        }
         res.json(result.rows);
     } catch (err) {
         console.error(err);
@@ -48,18 +61,25 @@ router.post('/', async (req, res) => {
         modelo_ia_cliente, modelo_ia_admin, nome_atendente, botoes_tempo, 
         valor_assinatura, data_vencimento, status_assinatura, plano_tipo, contexto_loja, dias_carencia
     } = req.body;
+    
+    // Gera token para a página pública
+    const crypto = require('crypto');
+    const connectToken = crypto.randomBytes(16).toString('hex');
+
     try {
         await pool.query(`
             INSERT INTO configuracoes (
                 instancia, nome_empresa, nome_admin, telefone_admin, chave_pix, nome_pix, 
                 modelo_ia_cliente, modelo_ia_admin, nome_atendente, botoes_tempo, 
-                valor_assinatura, data_vencimento, status_assinatura, plano_tipo, contexto_loja, dias_carencia
+                valor_assinatura, data_vencimento, status_assinatura, plano_tipo, contexto_loja, dias_carencia,
+                connect_token, status_conexao
             ) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
         `, [
             instancia, nome_empresa, nome_admin, telefone_admin, chave_pix, nome_pix, 
             modelo_ia_cliente || '', modelo_ia_admin || '', nome_atendente, botoes_tempo, 
-            valor_assinatura || 0, data_vencimento || null, status_assinatura || 'ativo', plano_tipo || 'recorrente', contexto_loja || '', dias_carencia || 0
+            valor_assinatura || 0, data_vencimento || null, status_assinatura || 'ativo', plano_tipo || 'recorrente', contexto_loja || '', dias_carencia || 0,
+            connectToken, 'PENDING'
         ]);
         res.status(201).json({ message: 'Tenant criado com sucesso' });
     } catch (err: any) {
