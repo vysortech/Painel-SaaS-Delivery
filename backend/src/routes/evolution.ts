@@ -28,15 +28,39 @@ router.get('/connect/:instancia', async (req, res) => {
         }
 
         // 2. Buscar o QR Code da instância para conectar
-        const connectResponse = await axios.get(`${EVO_URL}/instance/connect/${instancia}`, {
-            headers: { 'apikey': EVO_KEY }
-        });
+        let connectResponse;
+        try {
+            // Padrão: Evolution API v1 / v2 (NodeJS)
+            connectResponse = await axios.get(`${EVO_URL}/instance/connect/${instancia}`, {
+                headers: { 'apikey': EVO_KEY }
+            });
+        } catch (err: any) {
+            // Se retornar 404, significa que é a Evolution Go! (que usa outra rota)
+            if (err.response?.status === 404) {
+                console.log("Detectado Evolution Go, buscando QR Code por rota alternativa...");
+                connectResponse = await axios.get(`${EVO_URL}/instance/qr?instance=${instancia}`, {
+                    headers: { 'apikey': EVO_KEY }
+                });
+            } else {
+                throw err;
+            }
+        }
 
-        res.json(connectResponse.data);
+        // Evolution NodeJS retorna { base64: "..." }
+        // Evolution Go pode retornar { qrcode: "..." } ou { data: { qrcode: "..." } }
+        let finalData = connectResponse.data;
+        if (!finalData.base64) {
+            if (finalData.qrcode) finalData.base64 = finalData.qrcode;
+            else if (finalData.data?.qrcode) finalData.base64 = finalData.data.qrcode;
+            else if (finalData.data?.base64) finalData.base64 = finalData.data.base64;
+        }
+
+        res.json(finalData);
 
     } catch (err: any) {
-        console.error("Evolution API Error:", err.response?.data || err.message);
-        res.status(500).json({ error: 'Erro ao comunicar com Evolution API' });
+        const errorMsg = err.response?.data ? JSON.stringify(err.response.data) : err.message;
+        console.error("Evolution API Error:", errorMsg);
+        res.status(500).json({ error: 'Erro Evolution API', details: errorMsg });
     }
 });
 
