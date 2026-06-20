@@ -9,6 +9,7 @@ const EVO_KEY = process.env.EVOLUTION_API_KEY || 'X8G9W2M4V5N7B3L1K6J0H9P2Y3T5C8
 // Busca o QR Code ou Status de uma instância, criando-a se não existir.
 router.get('/connect/:instancia', async (req, res) => {
     const { instancia } = req.params;
+    const { phone } = req.query; // Pega o telefone da query (opcional)
     
     try {
         // 1. Tentar criar a instância
@@ -27,8 +28,10 @@ router.get('/connect/:instancia', async (req, res) => {
             // Se já existe, o erro é contornado
         }
 
-        // URL do seu Webhook no N8N (ou outra ferramenta). Altere via .env se necessário.
-        const WEBHOOK_URL = process.env.WEBHOOK_URL || 'https://n8n.vysortech.app.br/webhook/evolution';
+        // Webhook fixo com a URL solicitada (n8n1), substituindo a variável dinamicamente.
+        let defaultWebhook = 'https://n8n1.vysortech.app.br/webhook/9b37f408-861d-4cb8-beb3-1f66ef0233d7/:instancia';
+        let webhookTemplate = process.env.WEBHOOK_URL || defaultWebhook;
+        const WEBHOOK_URL = webhookTemplate.replace(':instancia', instancia);
 
         // 2. Buscar o QR Code da instância para conectar E setar o Webhook
         let connectResponse;
@@ -47,7 +50,10 @@ router.get('/connect/:instancia', async (req, res) => {
                 }, { headers: { 'apikey': EVO_KEY } });
             } catch(e) { console.log('Aviso: Falha ao setar webhook na rota antiga'); }
 
-            connectResponse = await axios.get(`${EVO_URL}/instance/connect/${instancia}`, {
+            let urlStr = `${EVO_URL}/instance/connect/${instancia}`;
+            if (phone) urlStr += `?phone=${phone}`; // Suporte a Pairing Code na API NodeJS, se houver
+            
+            connectResponse = await axios.get(urlStr, {
                 headers: { 'apikey': EVO_KEY }
             });
         } catch (err: any) {
@@ -55,14 +61,17 @@ router.get('/connect/:instancia', async (req, res) => {
             if (err.response?.status === 404 || err.response?.status === 401) {
                 console.log("Detectado Evolution Go, conectando e buscando QR Code por rota alternativa...");
                 
-                // Na Evolution Go, setamos o Webhook na rota /instance/connect
+                // Na Evolution Go, setamos o Webhook na rota /instance/connect e podemos enviar o phone
                 try {
-                    await axios.post(`${EVO_URL}/instance/connect`, {
+                    let connectPayload: any = {
                         instance: instancia,
                         webhookUrl: WEBHOOK_URL,
                         subscribe: ["MESSAGES_UPSERT", "MESSAGES_UPDATE", "MESSAGES_DELETE", "SEND_MESSAGE", "CONNECTION_UPDATE", "CALL"]
-                    }, { headers: { 'apikey': instancia, 'Content-Type': 'application/json' } });
-                } catch(e: any) { console.log('Aviso: Falha ao setar webhook via Evolution Go /instance/connect', e.message); }
+                    };
+                    if (phone) connectPayload.phone = String(phone);
+
+                    await axios.post(`${EVO_URL}/instance/connect`, connectPayload, { headers: { 'apikey': instancia, 'Content-Type': 'application/json' } });
+                } catch(e: any) { console.log('Aviso: Falha ao setar webhook via Evolution Go /instance/connect', e.response?.data || e.message); }
 
                 connectResponse = await axios.get(`${EVO_URL}/instance/qr?instance=${instancia}`, {
                     headers: { 'apikey': instancia }
