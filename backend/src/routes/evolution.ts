@@ -15,12 +15,15 @@ router.get('/connect/:instancia', async (req, res) => {
         try {
             await axios.post(`${EVO_URL}/instance/create`, {
                 instanceName: instancia,
+                name: instancia,
+                integration: "WHATSAPP-BAILEYS",
                 token: instancia,
                 qrcode: true
             }, {
                 headers: { 'apikey': EVO_KEY, 'Content-Type': 'application/json' }
             });
         } catch (e: any) {
+            console.error("Evolution Create Error:", e.response?.data || e.message);
             // Se já existe, o erro é contornado
         }
 
