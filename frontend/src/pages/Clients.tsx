@@ -187,7 +187,9 @@ export default function Clients() {
 
   const filteredTenants = tenants?.filter((t: any) => {
     const matchesFilter = filter === 'todos' || t.status_assinatura === filter;
-    const matchesSearch = t.nome_empresa.toLowerCase().includes(searchTerm.toLowerCase()) || t.instancia.toLowerCase().includes(searchTerm.toLowerCase());
+    const nome = t.nome_empresa || '';
+    const inst = t.instancia || '';
+    const matchesSearch = nome.toLowerCase().includes(searchTerm.toLowerCase()) || inst.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesFilter && matchesSearch;
   }) || [];
 
