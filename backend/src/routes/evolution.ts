@@ -48,12 +48,11 @@ router.get('/connect/:instancia', async (req, res) => {
         }
 
         // Evolution NodeJS retorna { base64: "..." }
-        // Evolution Go pode retornar { qrcode: "..." } ou { data: { qrcode: "..." } }
+        // Evolution Go pode retornar { qrcode: "..." } ou { data: { Qrcode: "..." } }
         let finalData = connectResponse.data;
         if (!finalData.base64) {
-            if (finalData.qrcode) finalData.base64 = finalData.qrcode;
-            else if (finalData.data?.qrcode) finalData.base64 = finalData.data.qrcode;
-            else if (finalData.data?.base64) finalData.base64 = finalData.data.base64;
+            const qr = finalData.qrcode || finalData.Qrcode || finalData.data?.qrcode || finalData.data?.Qrcode || finalData.data?.base64;
+            if (qr) finalData.base64 = qr;
         }
 
         res.json(finalData);
