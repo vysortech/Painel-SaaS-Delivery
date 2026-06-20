@@ -10,7 +10,7 @@ export default function Connect() {
 
     const fetchStatus = async () => {
         try {
-            const res = await axios.get(`http://localhost:4000/api/evolution/connect/${instancia}`);
+            const res = await axios.get(`/api/evolution/connect/${instancia}`);
             const data = res.data;
 
             if (data?.instance?.state === 'open') {

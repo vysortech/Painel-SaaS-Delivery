@@ -6,7 +6,7 @@ import { UserPlus, Trash2, Edit2, Save, X, Eye, EyeOff } from 'lucide-react';
 const fetcher = (url: string) => axios.get(url).then(res => res.data);
 
 export default function Users() {
-  const { data: users, mutate } = useSWR('http://localhost:4000/api/auth/users', fetcher);
+  const { data: users, mutate } = useSWR('/api/auth/users', fetcher);
   
   const [nome, setNome] = useState('');
   const [username, setUsername] = useState('');
@@ -18,7 +18,7 @@ export default function Users() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:4000/api/auth/register', { nome, username, password });
+      await axios.post('/api/auth/register', { nome, username, password });
       setNome('');
       setUsername('');
       setPassword('');
@@ -32,7 +32,7 @@ export default function Users() {
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.put(`http://localhost:4000/api/auth/users/${editingUser.id}`, { nome, username, password });
+      await axios.put(`/api/auth/users/${editingUser.id}`, { nome, username, password });
       setEditingUser(null);
       setNome('');
       setUsername('');
@@ -60,7 +60,7 @@ export default function Users() {
 
   const handleDelete = async (id: number) => {
     if(confirm('Tem certeza que deseja apagar este acesso?')) {
-      await axios.delete(`http://localhost:4000/api/auth/users/${id}`);
+      await axios.delete(`/api/auth/users/${id}`);
       mutate();
     }
   };

@@ -15,7 +15,7 @@ export default function Settings() {
   });
 
   useEffect(() => {
-    axios.get('http://localhost:4000/api/settings')
+    axios.get('/api/settings')
       .then(res => {
         if (res.data) {
           setFormData({
@@ -29,7 +29,7 @@ export default function Settings() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.put('http://localhost:4000/api/settings', formData);
+      await axios.put('/api/settings', formData);
       alert('Configurações globais salvas com sucesso!');
     } catch (err) {
       alert('Erro ao salvar as configurações.');

@@ -73,7 +73,7 @@ export default function Clients() {
     return `${yyyy}-${mm}-${dd}`;
   };
 
-  const { data: tenants, mutate } = useSWR('http://localhost:4000/api/config', fetcher, { refreshInterval: 5000 });
+  const { data: tenants, mutate } = useSWR('/api/config', fetcher, { refreshInterval: 5000 });
   const [filter, setFilter] = useState('todos');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -148,9 +148,9 @@ export default function Clients() {
       };
 
       if (isCreating) {
-        await axios.post('http://localhost:4000/api/config', payload);
+        await axios.post('/api/config', payload);
       } else {
-        await axios.put(`http://localhost:4000/api/config/${editingTenant.instancia}`, payload);
+        await axios.put(`/api/config/${editingTenant.instancia}`, payload);
       }
       setIsCreating(false);
       setEditingTenant(null);
@@ -164,7 +164,7 @@ export default function Clients() {
   const confirmDelete = async () => {
     if (deleteModal) {
        try {
-          await axios.delete(`http://localhost:4000/api/config/${deleteModal}`);
+          await axios.delete(`/api/config/${deleteModal}`);
           mutate();
           showToast('Cliente removido com sucesso!', 'success');
        } catch (err) {
@@ -177,7 +177,7 @@ export default function Clients() {
   const handleToggleStatus = async (tenant: any) => {
       try {
          const newStatus = tenant.status_assinatura === 'ativo' ? 'bloqueado' : 'ativo';
-         await axios.put(`http://localhost:4000/api/config/${tenant.instancia}`, { ...tenant, status_assinatura: newStatus });
+         await axios.put(`/api/config/${tenant.instancia}`, { ...tenant, status_assinatura: newStatus });
          mutate();
          showToast(`Status alterado para ${newStatus.toUpperCase()}`, 'success');
       } catch (e) {

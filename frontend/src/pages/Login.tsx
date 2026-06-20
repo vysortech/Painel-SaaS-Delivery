@@ -18,7 +18,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await axios.post('http://localhost:4000/api/auth/login', { username, password });
+      const res = await axios.post('/api/auth/login', { username, password });
       if (res.data && res.data.token) {
         const storage = rememberMe ? localStorage : sessionStorage;
         storage.setItem('saas_token', res.data.token);

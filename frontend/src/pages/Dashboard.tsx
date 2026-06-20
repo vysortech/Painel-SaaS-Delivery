@@ -7,8 +7,8 @@ import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, R
 const fetcher = (url: string) => axios.get(url).then(res => res.data);
 
 export default function Dashboard() {
-  const { data: tenants } = useSWR('http://localhost:4000/api/config', fetcher, { refreshInterval: 5000 });
-  const { data: mrrData } = useSWR('http://localhost:4000/api/analytics/mrr', fetcher, { refreshInterval: 10000 });
+  const { data: tenants } = useSWR('/api/config', fetcher, { refreshInterval: 5000 });
+  const { data: mrrData } = useSWR('/api/analytics/mrr', fetcher, { refreshInterval: 10000 });
 
   // KPIs reais baseados no banco
   const totalMRR = mrrData?.reduce((acc: number, curr: any) => acc + Number(curr.total_revenue), 0) || 0;
