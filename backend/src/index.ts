@@ -7,6 +7,7 @@ import analyticsRoutes from './routes/analytics';
 import alertsRoutes from './routes/alerts';
 import settingsRoutes from './routes/settings';
 import evolutionRoutes from './routes/evolution';
+import { startBillingCron } from './cron/billing';
 import path from 'path';
 import fs from 'fs';
 
@@ -37,6 +38,9 @@ if (fs.existsSync(frontendPath)) {
         res.sendFile(path.join(frontendPath, 'index.html'));
     });
 }
+
+// Iniciar tarefas em segundo plano (Cron Jobs)
+startBillingCron();
 
 app.listen(PORT, () => {
     console.log(`🚀 Backend SaaS V3 rodando na porta ${PORT}`);
