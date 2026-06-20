@@ -2,6 +2,7 @@ version: '3.8'
 
 services:
   saas-panel:
+    build: .
     image: painel-saas-delivery-saas-panel:latest
     environment:
       - PORT=4000
