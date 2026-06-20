@@ -25,6 +25,9 @@ pool.query(`
   ALTER TABLE configuracoes ADD COLUMN IF NOT EXISTS dias_carencia INT DEFAULT 0;
 `).catch(console.error);
 
+// Tenta remover a constraint NOT NULL da coluna chave separadamente, pois se ela não existir, o erro será ignorado sem quebrar o resto.
+pool.query(`ALTER TABLE configuracoes ALTER COLUMN chave DROP NOT NULL;`).catch(() => {});
+
 // Get all tenants
 router.get('/', async (req, res) => {
     try {

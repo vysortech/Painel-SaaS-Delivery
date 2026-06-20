@@ -36,10 +36,11 @@ router.get('/connect/:instancia', async (req, res) => {
             });
         } catch (err: any) {
             // Se retornar 404, significa que é a Evolution Go! (que usa outra rota)
-            if (err.response?.status === 404) {
+            if (err.response?.status === 404 || err.response?.status === 401) {
                 console.log("Detectado Evolution Go, buscando QR Code por rota alternativa...");
+                // A Evolution Go geralmente exige o token da própria instância após ela ser criada
                 connectResponse = await axios.get(`${EVO_URL}/instance/qr?instance=${instancia}`, {
-                    headers: { 'apikey': EVO_KEY }
+                    headers: { 'apikey': instancia }
                 });
             } else {
                 throw err;
