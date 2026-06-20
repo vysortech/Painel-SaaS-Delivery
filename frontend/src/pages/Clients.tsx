@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import useSWR from 'swr';
 import { Plus, Settings, Power, Trash2, Bot, CreditCard, Clock, X, Save, Search, CheckCircle2, AlertCircle } from 'lucide-react';
+import api from '../services/api';
+import type { TenantConfig } from '../types';
 
-const fetcher = (url: string) => axios.get(url).then(res => res.data);
+const fetcher = (url: string) => api.get(url).then(res => res.data);
 
 // Componente auxiliar para Input de Tags (Telefones e Botões de Tempo)
 const TagInput = ({ label, placeholder, tags, setTags, isPhone = false, isNumericOnly = false }: { label: string, placeholder: string, tags: string[], setTags: (t: string[]) => void, isPhone?: boolean, isNumericOnly?: boolean }) => {
@@ -20,7 +21,7 @@ const TagInput = ({ label, placeholder, tags, setTags, isPhone = false, isNumeri
     setTags(tags.filter((_, index) => index !== indexToRemove));
   };
 
-  const handleChange = (e: any) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       let val = e.target.value;
       if (isNumericOnly || isPhone) {
           val = val.replace(/\D/g, ''); // Remove tudo que não for número
@@ -148,15 +149,15 @@ export default function Clients() {
       };
 
       if (isCreating) {
-        await axios.post('/api/config', payload);
+        await api.post('/config', payload);
       } else {
-        await axios.put(`/api/config/${editingTenant.instancia}`, payload);
+        await api.put(`/config/${editingTenant?.instancia}`, payload);
       }
       setIsCreating(false);
       setEditingTenant(null);
       mutate();
       showToast('Cliente salvo com sucesso!', 'success');
-    } catch (err) {
+    } catch {
       showToast('Erro ao salvar cliente. Verifique a conexão com o Banco.', 'error');
     }
   };
@@ -164,28 +165,28 @@ export default function Clients() {
   const confirmDelete = async () => {
     if (deleteModal) {
        try {
-          await axios.delete(`/api/config/${deleteModal}`);
+          await api.delete(`/config/${deleteModal}`);
           mutate();
           showToast('Cliente removido com sucesso!', 'success');
-       } catch (err) {
+       } catch {
           showToast('Erro ao remover cliente.', 'error');
        }
        setDeleteModal(null);
     }
   };
 
-  const handleToggleStatus = async (tenant: any) => {
+  const handleToggleStatus = async (tenant: TenantConfig) => {
       try {
          const newStatus = tenant.status_assinatura === 'ativo' ? 'bloqueado' : 'ativo';
-         await axios.put(`/api/config/${tenant.instancia}`, { ...tenant, status_assinatura: newStatus });
+         await api.put(`/config/${tenant.instancia}`, { ...tenant, status_assinatura: newStatus });
          mutate();
          showToast(`Status alterado para ${newStatus.toUpperCase()}`, 'success');
-      } catch (e) {
+      } catch {
          showToast('Erro ao alterar status', 'error');
       }
   };
 
-  const filteredTenants = tenants?.filter((t: any) => {
+  const filteredTenants = tenants?.filter((t: TenantConfig) => {
     const matchesFilter = filter === 'todos' || t.status_assinatura === filter;
     const nome = t.nome_empresa || '';
     const inst = t.instancia || '';
@@ -231,7 +232,7 @@ export default function Clients() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-800">
-            {filteredTenants.map((tenant: any) => (
+            {filteredTenants.map((tenant: TenantConfig) => (
               <tr key={tenant.instancia} className="hover:bg-gray-800/20 transition-colors group">
                 <td className="p-4">
                   <div className="font-bold text-white text-base">{tenant.nome_empresa}</div>
@@ -240,6 +241,10 @@ export default function Clients() {
                     {tenant.status_conexao === 'CONNECTED' ? (
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">
                             🟢 Conectado
+                        </span>
+                    ) : tenant.status_conexao === 'PENDING' ? (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 uppercase tracking-wider">
+                            🟡 Aguardando Conexão
                         </span>
                     ) : (
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20 uppercase tracking-wider">
@@ -415,7 +420,7 @@ export default function Clients() {
                              <input type="text" className="w-full bg-gray-800 border border-gray-700 rounded-r p-2 text-white focus:border-emerald-500 outline-none" 
                                 value={(() => {
                                   const val = formData.valor_assinatura;
-                                  if (val === undefined || val === null || val === '') return '0,00';
+                                  if (val === undefined || val === null || (val as any) === '') return '0,00';
                                   const num = typeof val === 'string' ? parseFloat(val) : val;
                                   return isNaN(num) ? '0,00' : num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                                 })()} 

@@ -1,18 +1,19 @@
-import axios from 'axios';
 import useSWR from 'swr';
 import { Activity, DollarSign, Users, Database, TrendingUp, AlertTriangle, Zap, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import api from '../services/api';
+import type { TenantConfig, AnalyticsData } from '../types';
 
-const fetcher = (url: string) => axios.get(url).then(res => res.data);
+const fetcher = (url: string) => api.get(url).then(res => res.data);
 
 export default function Dashboard() {
-  const { data: tenants } = useSWR('/api/config', fetcher, { refreshInterval: 5000 });
-  const { data: mrrData } = useSWR('/api/analytics/mrr', fetcher, { refreshInterval: 10000 });
+  const { data: tenants } = useSWR('/config', fetcher, { refreshInterval: 5000 });
+  const { data: mrrData } = useSWR('/analytics/mrr', fetcher, { refreshInterval: 10000 });
 
   // KPIs reais baseados no banco
-  const totalMRR = mrrData?.reduce((acc: number, curr: any) => acc + Number(curr.total_revenue), 0) || 0;
-  const activeTenants = tenants?.filter((t: any) => t.status_assinatura === 'ativo').length || 0;
-  const inactiveTenants = tenants?.filter((t: any) => t.status_assinatura !== 'ativo').length || 0;
+  const totalMRR = mrrData?.reduce((acc: number, curr: AnalyticsData) => acc + Number(curr.total_revenue), 0) || 0;
+  const activeTenants = tenants?.filter((t: TenantConfig) => t.status_assinatura === 'ativo').length || 0;
+  const inactiveTenants = tenants?.filter((t: TenantConfig) => t.status_assinatura !== 'ativo').length || 0;
   
   // Consumo MOCK para dar vida ao painel (Em prod virá do n8n/Postgres)
   const totalTokens = activeTenants * 1250000; 
@@ -28,7 +29,7 @@ export default function Dashboard() {
   ];
 
   // Dados de consumo MOCK por cliente
-  const consumptionData = tenants?.slice(0, 5).map((t: any, index: number) => ({
+  const consumptionData = tenants?.slice(0, 5).map((t: TenantConfig, index: number) => ({
     name: t.nome_empresa,
     tokens: (index + 1) * 150000 + 100000
   })) || [];
@@ -197,7 +198,7 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800/50">
-              {tenants?.slice(0, 5).map((t: any) => (
+              {tenants?.slice(0, 5).map((t: TenantConfig) => (
                 <tr key={t.instancia} className="hover:bg-gray-800/20 transition-colors">
                   <td className="p-4 text-white font-medium">{t.nome_empresa}</td>
                   <td className="p-4 text-gray-400 text-sm font-mono">{t.instancia}</td>

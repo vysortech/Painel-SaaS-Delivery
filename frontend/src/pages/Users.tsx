@@ -1,19 +1,20 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import useSWR from 'swr';
 import { UserPlus, Trash2, Edit2, Save, X, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
+import api from '../services/api';
+import type { User } from '../types';
 
-const fetcher = (url: string) => axios.get(url).then(res => res.data);
+const fetcher = (url: string) => api.get(url).then(res => res.data);
 
 export default function Users() {
-  const { data: users, mutate } = useSWR('/api/auth/users', fetcher);
+  const { data: users, mutate } = useSWR('/auth/users', fetcher);
   
   const [nome, setNome] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   
-  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
 
   // New states for custom modals and toasts
   const [deleteModal, setDeleteModal] = useState<{ id: number, name: string } | null>(null);
@@ -27,13 +28,13 @@ export default function Users() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post('/api/auth/register', { nome, username, password });
+      await api.post('/auth/register', { nome, username, password });
       setNome('');
       setUsername('');
       setPassword('');
       mutate();
       showToast('Usuário cadastrado com sucesso!', 'success');
-    } catch (err) {
+    } catch {
       showToast('Erro ao criar usuário. Ele já pode existir.', 'error');
     }
   };
@@ -41,19 +42,19 @@ export default function Users() {
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.put(`/api/auth/users/${editingUser.id}`, { nome, username, password });
+      await api.put(`/auth/users/${editingUser?.id}`, { nome, username, password });
       setEditingUser(null);
       setNome('');
       setUsername('');
       setPassword('');
       mutate();
       showToast('Usuário atualizado com sucesso!', 'success');
-    } catch (err) {
+    } catch {
       showToast('Erro ao atualizar usuário.', 'error');
     }
   };
 
-  const handleOpenEdit = (user: any) => {
+  const handleOpenEdit = (user: User) => {
     setEditingUser(user);
     setNome(user.nome || '');
     setUsername(user.username || '');
@@ -70,11 +71,11 @@ export default function Users() {
   const confirmDelete = async () => {
     if (!deleteModal) return;
     try {
-      await axios.delete(`/api/auth/users/${deleteModal.id}`);
+      await api.delete(`/auth/users/${deleteModal.id}`);
       setDeleteModal(null);
       mutate();
       showToast('Usuário removido com sucesso!', 'success');
-    } catch (err) {
+    } catch {
       showToast('Erro ao excluir usuário.', 'error');
     }
   };
@@ -135,7 +136,7 @@ export default function Users() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-800">
-            {users?.map((u: any) => (
+            {users?.map((u: User) => (
               <tr key={u.id} className={`hover:bg-gray-800/20 transition-colors ${editingUser?.id === u.id ? 'bg-blue-900/10' : ''}`}>
                 <td className="p-4 text-gray-500 font-mono">#{u.id}</td>
                 <td className="p-4 text-white font-bold">{u.nome || 'N/A'}</td>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { Lock, User, LogIn, Eye, EyeOff } from 'lucide-react';
+import api from '../services/api';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -18,7 +18,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await axios.post('/api/auth/login', { username, password });
+      const res = await api.post('/auth/login', { username, password });
       if (res.data && res.data.token) {
         const storage = rememberMe ? localStorage : sessionStorage;
         storage.setItem('saas_token', res.data.token);
@@ -26,8 +26,9 @@ export default function Login() {
         storage.setItem('saas_nome', res.data.nome);
         navigate('/dashboard');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Erro ao conectar no servidor. Verifique suas credenciais.');
+    } catch (err: unknown) {
+      const errorResponse = (err as { response?: { data?: { error?: string } } }).response?.data?.error;
+      setError(errorResponse || 'Erro ao conectar no servidor. Verifique suas credenciais.');
     } finally {
       setLoading(false);
     }

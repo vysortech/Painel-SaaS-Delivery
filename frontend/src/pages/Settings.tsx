@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Save, Bot, Key, Database } from 'lucide-react';
+import { Save, Bot, Key, Database, CheckCircle2, AlertCircle, X } from 'lucide-react';
+import api from '../services/api';
+import type { GlobalSettings } from '../types';
 
 export default function Settings() {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Partial<GlobalSettings>>({
     prompt_cliente: '',
     prompt_admin: '',
     modelo_ia_cliente: 'google/gemma-4-31b-it',
@@ -14,14 +15,21 @@ export default function Settings() {
     custo_token_saida_admin: 0.0001
   });
 
+  const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+      setToast({ message, type });
+      setTimeout(() => setToast(null), 4000);
+  };
+
   useEffect(() => {
-    axios.get('/api/settings')
+    api.get('/settings')
       .then(res => {
         if (res.data) {
-          setFormData({
-            ...formData,
+          setFormData(prev => ({
+            ...prev,
             ...res.data
-          });
+          }));
         }
       });
   }, []);
@@ -29,10 +37,10 @@ export default function Settings() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.put('/api/settings', formData);
-      alert('Configurações globais salvas com sucesso!');
-    } catch (err) {
-      alert('Erro ao salvar as configurações.');
+      await api.put('/settings', formData);
+      showToast('Configurações globais salvas com sucesso!', 'success');
+    } catch {
+      showToast('Erro ao salvar as configurações.', 'error');
     }
   };
 
@@ -142,6 +150,20 @@ export default function Settings() {
         </div>
 
       </form>
+      {/* Global Toast Notification */}
+      {toast && (
+         <div className="fixed bottom-6 right-6 z-[70] animate-fade-in-up">
+            <div className={`flex items-center gap-3 px-6 py-4 rounded-xl shadow-lg border ${
+               toast.type === 'success' ? 'bg-emerald-900/50 border-emerald-500/50 text-emerald-400' : 'bg-red-900/50 border-red-500/50 text-red-400'
+            }`}>
+               {toast.type === 'success' ? <CheckCircle2 className="w-6 h-6" /> : <AlertCircle className="w-6 h-6" />}
+               <span className="font-medium text-white">{toast.message}</span>
+               <button onClick={() => setToast(null)} className="ml-4 opacity-70 hover:opacity-100">
+                  <X className="w-4 h-4" />
+               </button>
+            </div>
+         </div>
+      )}
     </div>
   );
 }

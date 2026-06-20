@@ -1,35 +1,15 @@
-import { Router } from 'express';
-import pool from '../db';
-import jwt from 'jsonwebtoken';
+import { Router, Request, Response } from 'express';
+import { AnalyticsRepository } from '../repositories/AnalyticsRepository';
+import { authMiddleware, AuthRequest } from '../middlewares/authMiddleware';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_saas_key';
-
-const authMiddleware = (req: any, res: any, next: any) => {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'Acesso negado' });
-    try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        req.user = decoded;
-        next();
-    } catch (err) {
-        res.status(401).json({ error: 'Token inválido' });
-    }
-};
 
 // router.use(authMiddleware);
 
-router.get('/mrr', async (req, res) => {
+router.get('/mrr', async (req: AuthRequest, res: Response) => {
     try {
-        const result = await pool.query(`
-            SELECT 
-                status_assinatura, 
-                COUNT(*) as count, 
-                SUM(valor_assinatura) as total_revenue 
-            FROM configuracoes 
-            GROUP BY status_assinatura
-        `);
-        res.json(result.rows);
+        const data = await AnalyticsRepository.getMRR();
+        res.json(data);
     } catch (err) {
         res.status(500).json({ error: 'Erro ao processar dados financeiros' });
     }

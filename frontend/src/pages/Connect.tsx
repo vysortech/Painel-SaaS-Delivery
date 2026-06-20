@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
 import { Smartphone, CheckCircle2, Loader2, AlertCircle, Hash } from 'lucide-react';
+import api from '../services/api';
 
 export default function Connect() {
     const { instancia } = useParams(); // actually this is the token now
@@ -15,10 +15,10 @@ export default function Connect() {
         let isMounted = true;
         const fetchStatus = async (phoneNumber?: string) => {
             try {
-                let url = `/api/public/whatsapp/qrcode/${instancia}`;
+                let url = `/public/whatsapp/qrcode/${instancia}`;
                 if (phoneNumber) url += `?phone=${phoneNumber}`;
                 
-                const res = await axios.get(url);
+                const res = await api.get(url);
                 const data = res.data;
 
                 if (!isMounted) return;
@@ -39,7 +39,7 @@ export default function Connect() {
                 } else {
                     setStatus('error');
                 }
-            } catch (err) {
+            } catch {
                 if (isMounted) setStatus('error');
             } finally {
                 if (isMounted) setRequestingPairing(false);
@@ -64,7 +64,7 @@ export default function Connect() {
         setRequestingPairing(true);
         setStatus('loading');
         try {
-            const res = await axios.get(`/api/public/whatsapp/qrcode/${instancia}?phone=${phone.replace(/\D/g, '')}`);
+            const res = await api.get(`/public/whatsapp/qrcode/${instancia}?phone=${phone.replace(/\D/g, '')}`);
             const data = res.data;
             if (data.connected || data.status === 'CONNECTED') {
                 setStatus('connected');
@@ -74,7 +74,7 @@ export default function Connect() {
             } else {
                 setStatus('error');
             }
-        } catch (err) {
+        } catch {
             setStatus('error');
         } finally {
             setRequestingPairing(false);
