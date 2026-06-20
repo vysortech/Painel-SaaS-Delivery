@@ -27,6 +27,8 @@ pool.query(`
 
 // Tenta remover a constraint NOT NULL da coluna chave separadamente, pois se ela não existir, o erro será ignorado sem quebrar o resto.
 pool.query(`ALTER TABLE configuracoes ALTER COLUMN chave DROP NOT NULL;`).catch(() => {});
+// Idem para a coluna valor antiga
+pool.query(`ALTER TABLE configuracoes ALTER COLUMN valor DROP NOT NULL;`).catch(() => {});
 
 // Get all tenants
 router.get('/', async (req, res) => {
