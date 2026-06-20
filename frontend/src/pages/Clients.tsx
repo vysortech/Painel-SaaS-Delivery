@@ -74,7 +74,7 @@ export default function Clients() {
     return `${yyyy}-${mm}-${dd}`;
   };
 
-  const { data: tenants, mutate } = useSWR('/api/config', fetcher, { refreshInterval: 5000 });
+  const { data: tenants, mutate } = useSWR('/config', fetcher, { refreshInterval: 5000 });
   const [filter, setFilter] = useState('todos');
   const [searchTerm, setSearchTerm] = useState('');
 
