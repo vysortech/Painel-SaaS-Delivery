@@ -5,8 +5,6 @@ services:
     build: .
     container_name: saas-panel-v3
     restart: always
-    ports:
-      - "4000:4000"
     environment:
       - PORT=4000
       - DB_HOST=postgres
@@ -15,13 +13,20 @@ services:
       - DB_PASSWORD=e2zaFkFxxIfX04QxP55LEvX2ZNW6XKFb
       - DB_NAME=saas_delivery
       - JWT_SECRET=super_secret_saas_key
-      # IP da sua VPS para o painel se conectar à Evolution API:
       - EVOLUTION_API_URL=http://116.203.152.114:8080
       - EVOLUTION_API_KEY=X8G9W2M4V5N7B3L1K6J0H9P2Y3T5C8F1
-    # Se o seu postgres estiver na mesma VPS, você pode conectar eles na mesma rede:
-    # networks:
-    #   - n8n_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.saaspanel.rule=Host(`food.vysortech.app.br`)"
+      - "traefik.http.routers.saaspanel.entrypoints=websecure"
+      - "traefik.http.routers.saaspanel.tls=true"
+      - "traefik.http.routers.saaspanel.tls.certresolver=letsencrypt" # Mude se o seu resolver no Traefik tiver outro nome
+      - "traefik.http.services.saaspanel.loadbalancer.server.port=4000"
+    networks:
+      - proxy
+      - default # ou a rede onde seu postgres está (ex: n8n_network)
 
-# networks:
-#   n8n_network:
-#     external: true
+networks:
+  proxy:
+    external: true
+    name: proxy # Altere para o nome da rede do seu Traefik (ex: traefik_public, web, etc)
