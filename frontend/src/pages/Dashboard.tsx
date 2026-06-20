@@ -28,9 +28,9 @@ export default function Dashboard() {
   ];
 
   // Dados de consumo MOCK por cliente
-  const consumptionData = tenants?.slice(0, 5).map((t: any) => ({
+  const consumptionData = tenants?.slice(0, 5).map((t: any, index: number) => ({
     name: t.nome_empresa,
-    tokens: Math.floor(Math.random() * 500000) + 100000
+    tokens: (index + 1) * 150000 + 100000
   })) || [];
 
   return (

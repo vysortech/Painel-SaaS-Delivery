@@ -11,28 +11,66 @@ export default function Connect() {
     const [phone, setPhone] = useState('');
     const [requestingPairing, setRequestingPairing] = useState(false);
 
-    const fetchStatus = async (phoneNumber?: string) => {
-        try {
-            let url = `/api/public/whatsapp/qrcode/${instancia}`;
-            if (phoneNumber) url += `?phone=${phoneNumber}`;
-            
-            const res = await axios.get(url);
-            const data = res.data;
+    useEffect(() => {
+        let isMounted = true;
+        const fetchStatus = async (phoneNumber?: string) => {
+            try {
+                let url = `/api/public/whatsapp/qrcode/${instancia}`;
+                if (phoneNumber) url += `?phone=${phoneNumber}`;
+                
+                const res = await axios.get(url);
+                const data = res.data;
 
+                if (!isMounted) return;
+
+                if (data.connected || data.status === 'CONNECTED') {
+                    setStatus('connected');
+                    setQrCode(null);
+                    setPairingCode(null);
+                } else if (data.code) {
+                    setStatus('pairing');
+                    setPairingCode(data.code);
+                } else if (data.pairingCode) {
+                    setStatus('pairing');
+                    setPairingCode(data.pairingCode);
+                } else if (data.base64) {
+                    setStatus('qr');
+                    setQrCode(data.base64);
+                } else {
+                    setStatus('error');
+                }
+            } catch (err) {
+                if (isMounted) setStatus('error');
+            } finally {
+                if (isMounted) setRequestingPairing(false);
+            }
+        };
+
+        fetchStatus();
+        const interval = setInterval(() => {
+            if (status !== 'connected' && !requestingPairing) {
+                fetchStatus();
+            }
+        }, 5000);
+        
+        return () => {
+            isMounted = false;
+            clearInterval(interval);
+        };
+    }, [instancia, status, requestingPairing]);
+
+    const handleRequestPairing = async () => {
+        if (!phone || phone.length < 10) return;
+        setRequestingPairing(true);
+        setStatus('loading');
+        try {
+            const res = await axios.get(`/api/public/whatsapp/qrcode/${instancia}?phone=${phone.replace(/\D/g, '')}`);
+            const data = res.data;
             if (data.connected || data.status === 'CONNECTED') {
                 setStatus('connected');
-                setQrCode(null);
-                setPairingCode(null);
-            } else if (data.code) {
-                // Evolution Go returns pairing code as 'code'
+            } else if (data.code || data.pairingCode) {
                 setStatus('pairing');
-                setPairingCode(data.code);
-            } else if (data.pairingCode) {
-                setStatus('pairing');
-                setPairingCode(data.pairingCode);
-            } else if (data.base64) {
-                setStatus('qr');
-                setQrCode(data.base64);
+                setPairingCode(data.code || data.pairingCode);
             } else {
                 setStatus('error');
             }
@@ -41,23 +79,6 @@ export default function Connect() {
         } finally {
             setRequestingPairing(false);
         }
-    };
-
-    useEffect(() => {
-        fetchStatus();
-        const interval = setInterval(() => {
-            if (status !== 'connected' && !requestingPairing) {
-                fetchStatus();
-            }
-        }, 5000);
-        return () => clearInterval(interval);
-    }, [instancia, status, requestingPairing]);
-
-    const handleRequestPairing = () => {
-        if (!phone || phone.length < 10) return;
-        setRequestingPairing(true);
-        setStatus('loading');
-        fetchStatus(phone.replace(/\D/g, ''));
     };
 
     return (
