@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import useSWR from 'swr';
-import { UserPlus, Trash2, Edit2, Save, X, Eye, EyeOff } from 'lucide-react';
+import { UserPlus, Trash2, Edit2, Save, X, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
 
 const fetcher = (url: string) => axios.get(url).then(res => res.data);
 
@@ -15,6 +15,15 @@ export default function Users() {
   
   const [editingUser, setEditingUser] = useState<any>(null);
 
+  // New states for custom modals and toasts
+  const [deleteModal, setDeleteModal] = useState<{ id: number, name: string } | null>(null);
+  const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -23,9 +32,9 @@ export default function Users() {
       setUsername('');
       setPassword('');
       mutate();
-      alert('Usuário cadastrado com sucesso!');
+      showToast('Usuário cadastrado com sucesso!', 'success');
     } catch (err) {
-      alert('Erro ao criar usuário. Ele já pode existir.');
+      showToast('Erro ao criar usuário. Ele já pode existir.', 'error');
     }
   };
 
@@ -38,9 +47,9 @@ export default function Users() {
       setUsername('');
       setPassword('');
       mutate();
-      alert('Usuário atualizado com sucesso!');
+      showToast('Usuário atualizado com sucesso!', 'success');
     } catch (err) {
-      alert('Erro ao atualizar usuário.');
+      showToast('Erro ao atualizar usuário.', 'error');
     }
   };
 
@@ -58,10 +67,15 @@ export default function Users() {
     setPassword('');
   };
 
-  const handleDelete = async (id: number) => {
-    if(confirm('Tem certeza que deseja apagar este acesso?')) {
-      await axios.delete(`/api/auth/users/${id}`);
+  const confirmDelete = async () => {
+    if (!deleteModal) return;
+    try {
+      await axios.delete(`/api/auth/users/${deleteModal.id}`);
+      setDeleteModal(null);
       mutate();
+      showToast('Usuário removido com sucesso!', 'success');
+    } catch (err) {
+      showToast('Erro ao excluir usuário.', 'error');
     }
   };
 
@@ -132,7 +146,7 @@ export default function Users() {
                      <button onClick={() => handleOpenEdit(u)} className="p-2 text-blue-400 hover:bg-blue-500/20 rounded transition-colors" title="Editar Usuário">
                        <Edit2 className="w-4 h-4" />
                      </button>
-                     <button onClick={() => handleDelete(u.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded transition-colors" title="Excluir Usuário">
+                     <button onClick={() => setDeleteModal({ id: u.id, name: u.username })} className="p-2 text-red-500 hover:bg-red-500/10 rounded transition-colors" title="Excluir Usuário">
                        <Trash2 className="w-4 h-4" />
                      </button>
                   </div>
@@ -145,6 +159,44 @@ export default function Users() {
           </tbody>
         </table>
       </div>
+
+      {/* Custom Delete Modal */}
+      {deleteModal && (
+         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex justify-center items-center p-4">
+            <div className="bg-[#111827] border border-red-500/30 w-full max-w-md rounded-2xl shadow-2xl p-6 text-center">
+               <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Trash2 className="w-8 h-8" />
+               </div>
+               <h3 className="text-xl font-bold text-white mb-2">Excluir Acesso?</h3>
+               <p className="text-gray-400 text-sm mb-6">
+                  Tem certeza que deseja remover o acesso do usuário <b>{deleteModal.name}</b>?
+               </p>
+               <div className="flex justify-center gap-4">
+                  <button onClick={() => setDeleteModal(null)} className="px-6 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 font-bold transition-colors">
+                     Cancelar
+                  </button>
+                  <button onClick={confirmDelete} className="px-6 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold transition-colors">
+                     Sim, Excluir!
+                  </button>
+               </div>
+            </div>
+         </div>
+      )}
+
+      {/* Global Toast Notification */}
+      {toast && (
+         <div className="fixed bottom-6 right-6 z-[70] animate-fade-in-up">
+            <div className={`flex items-center gap-3 px-6 py-4 rounded-xl shadow-lg border ${
+               toast.type === 'success' ? 'bg-emerald-900/50 border-emerald-500/50 text-emerald-400' : 'bg-red-900/50 border-red-500/50 text-red-400'
+            }`}>
+               {toast.type === 'success' ? <CheckCircle2 className="w-6 h-6" /> : <AlertCircle className="w-6 h-6" />}
+               <span className="font-medium text-white">{toast.message}</span>
+               <button onClick={() => setToast(null)} className="ml-4 opacity-70 hover:opacity-100">
+                  <X className="w-4 h-4" />
+               </button>
+            </div>
+         </div>
+      )}
     </div>
   );
 }
