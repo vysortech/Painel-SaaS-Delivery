@@ -49,8 +49,8 @@ export class EvolutionService {
                 headers: { 'apikey': EVO_KEY }
             });
         } catch (err: any) {
-            if (err.response?.status === 404 || err.response?.status === 401) {
-                console.log("Detectado Evolution Go, conectando e buscando QR Code por rota alternativa...");
+            if (err.response?.status === 404 || err.response?.status === 401 || err.response?.status === 403) {
+                console.log("Detectado Evolution Go, conectando por rota alternativa...");
                 
                 try {
                     // Tentar setar o webhook padrão do Evolution Go
@@ -65,19 +65,15 @@ export class EvolutionService {
                     }, { headers: { 'apikey': EVO_KEY } }).catch(() => {});
 
                     let connectUrl = `${EVO_URL}/instance/connect/${instancia}`;
-                    // Evolution GO aceita number via query string na URL /instance/connect/:instanceName
                     if (phone) connectUrl += `?number=${phone}`;
                     
-                    await axios.get(connectUrl, { 
+                    connectResponse = await axios.get(connectUrl, { 
                         headers: { 'apikey': EVO_KEY } 
                     });
                 } catch(e: any) { 
-                    console.log('Aviso: Falha ao setar webhook ou conectar no Evolution Go', e.response?.data || e.message); 
+                    console.log('Aviso: Falha ao conectar no Evolution Go', e.response?.data || e.message); 
+                    throw e;
                 }
-
-                connectResponse = await axios.get(`${EVO_URL}/instance/qr?instance=${instancia}`, {
-                    headers: { 'apikey': instancia }
-                });
             } else {
                 throw err;
             }

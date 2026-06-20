@@ -92,7 +92,10 @@ export class ConfigRepository {
     }
 
     public static async getByToken(token: string): Promise<TenantConfig | null> {
-        const result = await pool.query('SELECT * FROM configuracoes WHERE connect_token = $1', [token]);
+        let result = await pool.query('SELECT * FROM configuracoes WHERE connect_token = $1', [token]);
+        if (result.rows.length === 0) {
+            result = await pool.query('SELECT * FROM configuracoes WHERE instancia = $1', [token]);
+        }
         return result.rows[0] as TenantConfig || null;
     }
 
