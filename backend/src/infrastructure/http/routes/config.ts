@@ -47,14 +47,20 @@ router.post('/', validate(createTenantSchema), async (req: Request, res: Respons
         
         // Sync advanced settings with Evolution Go
         if (tenant.instancia) {
-            await EvolutionService.createInstance(tenant.instancia);
-            await EvolutionService.updateAdvancedSettings(tenant.instancia, {
-                alwaysOnline: tenant.sempre_online,
-                rejectCall: tenant.rejeitar_chamadas,
-                readMessages: tenant.marcar_lidas,
-                ignoreGroups: tenant.ignorar_grupos,
-                ignoreStatus: tenant.ignorar_status
-            });
+            try {
+                await EvolutionService.createInstance(tenant.instancia);
+                await EvolutionService.updateAdvancedSettings(tenant.instancia, {
+                    alwaysOnline: tenant.sempre_online,
+                    rejectCall: tenant.rejeitar_chamadas,
+                    readMessages: tenant.marcar_lidas,
+                    ignoreGroups: tenant.ignorar_grupos,
+                    ignoreStatus: tenant.ignorar_status
+                });
+            } catch (evoErr: any) {
+                // Compensating action: Se a Evolution falhar criticamente, reverta do banco
+                await ConfigRepository.delete(tenant.instancia);
+                throw new Error(`Falha ao criar na Evolution API. Rollback efetuado. Detalhe: ${evoErr.message}`);
+            }
         }
 
         res.status(201).json({ message: 'Tenant criado com sucesso', connect_token: connectToken });

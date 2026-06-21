@@ -1,10 +1,11 @@
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
+import { logger } from '../../shared/logger';
 
 dotenv.config();
 
 if (!process.env.DB_PASSWORD) {
-    console.error('❌ FATAL: DB_PASSWORD não definido nas variáveis de ambiente!');
+    logger.fatal('FATAL: DB_PASSWORD não definido nas variáveis de ambiente!');
     process.exit(1);
 }
 
@@ -21,15 +22,19 @@ const pool = new Pool({
   statement_timeout: 30000,
 });
 
+pool.on('error', (err, client) => {
+  logger.error({ err }, 'Unexpected error on idle client');
+  // Evitamos chamar process.exit() aqui para que falhas de rede intermitentes não derrubem o servidor
+});
+
 // Test connection
 pool.connect((err, client, release) => {
   if (err) {
-    console.error('❌ Erro ao conectar no PostgreSQL:', err.stack);
+    logger.error({ err }, 'Erro ao conectar no PostgreSQL');
   } else {
-    console.log('✅ Conectado ao PostgreSQL com sucesso!');
+    logger.info('Conectado ao PostgreSQL com sucesso!');
     release();
   }
 });
 
 export default pool;
-

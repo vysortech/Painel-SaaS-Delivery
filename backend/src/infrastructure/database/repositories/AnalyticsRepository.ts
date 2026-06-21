@@ -1,7 +1,13 @@
 import pool from '../database';
 
+export interface MRRStats {
+    status_assinatura: string;
+    count: string; // COUNT no postgres retorna string em js
+    total_revenue: string; // SUM no postgres retorna string
+}
+
 export class AnalyticsRepository {
-    public static async getMRR(): Promise<any[]> {
+    public static async getMRR(): Promise<MRRStats[]> {
         const result = await pool.query(`
             SELECT 
                 status_assinatura, 
@@ -10,6 +16,6 @@ export class AnalyticsRepository {
             FROM configuracoes 
             GROUP BY status_assinatura
         `);
-        return result.rows;
+        return result.rows as MRRStats[];
     }
 }

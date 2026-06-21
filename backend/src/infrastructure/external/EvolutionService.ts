@@ -1,5 +1,25 @@
 import axios from 'axios';
+import axiosRetry from 'axios-retry';
 import { GlobalSettingsRepository } from '../database/repositories/GlobalSettingsRepository';
+import { logger } from '../../shared/logger';
+
+// Instância dedicada para Evolution com Timeout de 15s
+const evolutionApi = axios.create({
+    timeout: 15000, 
+});
+
+// Configura 3 retentativas com Exponential Backoff
+axiosRetry(evolutionApi, {
+    retries: 3,
+    retryDelay: axiosRetry.exponentialDelay,
+    retryCondition: (error) => {
+        // Tenta novamente em caso de timeout ou erros 5xx
+        return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.code === 'ECONNABORTED';
+    },
+    onRetry: (retryCount, error, requestConfig) => {
+        logger.warn({ retryCount, url: requestConfig.url, error: error.message }, 'Retrying Evolution API request...');
+    }
+});
 
 export class EvolutionService {
     private static async getCredentials() {
@@ -15,18 +35,18 @@ export class EvolutionService {
     public static async logoutInstance(instancia: string): Promise<void> {
         const { url, key } = await this.getCredentials();
         try {
-            await axios.delete(`${url}/instance/logout/${instancia}`, {
+            await evolutionApi.delete(`${url}/instance/logout/${instancia}`, {
                 headers: { 'apikey': key }
             });
         } catch (e: any) {
-            console.error("Evolution Logout Error:", e.response?.data || e.message);
+            logger.error({ err: e.response?.data || e.message, instancia }, "Evolution Logout Error");
         }
     }
 
     public static async createInstance(instancia: string): Promise<void> {
         const { url, key } = await this.getCredentials();
         try {
-            await axios.post(`${url}/instance/create`, {
+            await evolutionApi.post(`${url}/instance/create`, {
                 instanceName: instancia,
                 name: instancia,
                 integration: "WHATSAPP-BAILEYS",
@@ -36,18 +56,19 @@ export class EvolutionService {
                 headers: { 'apikey': key, 'Content-Type': 'application/json' }
             });
         } catch (e: any) {
-            console.error("Evolution Create Error:", e.response?.data || e.message);
+            logger.error({ err: e.response?.data || e.message, instancia }, "Evolution Create Error");
+            throw e; // Lança o erro para que a rota possa reverter a criação no banco
         }
     }
 
     public static async updateAdvancedSettings(instancia: string, settings: any): Promise<void> {
         const { url, key } = await this.getCredentials();
         try {
-            await axios.put(`${url}/instance/${instancia}/advanced-settings`, settings, {
+            await evolutionApi.put(`${url}/instance/${instancia}/advanced-settings`, settings, {
                 headers: { 'apikey': key, 'Content-Type': 'application/json' }
             });
         } catch (e: any) {
-            console.error(`Evolution Update Settings Error for ${instancia}:`, e.response?.data || e.message);
+            logger.error({ err: e.response?.data || e.message, instancia }, "Evolution Update Settings Error");
         }
     }
 
@@ -62,22 +83,18 @@ export class EvolutionService {
 
         // 1. Check Evo Go status directly using instance token
         try {
-            const statusRes = await axios.get(`${url}/instance/status`, {
+            const statusRes = await evolutionApi.get(`${url}/instance/status`, {
                 headers: { 'apikey': instancia }
             });
             isEvoGo = true;
             evoGoState = statusRes.data?.instance?.state || statusRes.data?.state || '';
-        } catch (e) {
-            // It might fail if the instance is not created yet, or if it's the old Evolution API
-        }
+        } catch (e) {}
 
-        // If it failed, let's try creating it just in case it's a new Evo Go instance that doesn't exist yet
         if (!isEvoGo) {
             await this.createInstance(instancia).catch(() => {});
             
-            // Try checking status again
             try {
-                const statusRes = await axios.get(`${url}/instance/status`, {
+                const statusRes = await evolutionApi.get(`${url}/instance/status`, {
                     headers: { 'apikey': instancia }
                 });
                 isEvoGo = true;
@@ -91,10 +108,9 @@ export class EvolutionService {
                 return { connected: true, status: 'CONNECTED' };
             }
 
-            // Only request a new connection if it's not already connecting
             if (evoGoState !== 'connecting') {
                 try {
-                    await axios.post(`${url}/webhook/set/${instancia}`, {
+                    await evolutionApi.post(`${url}/webhook/set/${instancia}`, {
                         webhook: {
                             enabled: true,
                             url: WEBHOOK_URL,
@@ -104,31 +120,28 @@ export class EvolutionService {
                         }
                     }, { headers: { 'apikey': key } }).catch(() => {});
 
-                    await axios.post(`${url}/instance/connect`, {
+                    await evolutionApi.post(`${url}/instance/connect`, {
                         webhookUrl: WEBHOOK_URL
                     }, { headers: { 'apikey': instancia } });
                     
-                    // Wait a bit for the Bailey's socket to generate the QR Code
                     await new Promise(resolve => setTimeout(resolve, 2000));
                 } catch(e: any) {
-                    console.error("Evolution Go Connect Error:", e.response?.data || e.message);
+                    logger.error({ err: e.response?.data || e.message, instancia }, "Evolution Go Connect Error");
                 }
             }
 
             let result: any = { base64: null, pairingCode: null, status: evoGoState.toUpperCase() };
             
-            // Try fetching the QR Code
             try {
-                const qrRes = await axios.get(`${url}/instance/qr`, { 
+                const qrRes = await evolutionApi.get(`${url}/instance/qr`, { 
                     headers: { 'apikey': instancia } 
                 });
                 result.base64 = qrRes.data?.data?.Qrcode || qrRes.data?.Qrcode || qrRes.data?.base64 || null;
             } catch(e) {}
 
-            // Try fetching the Pairing Code if phone is provided
             if (phone) {
                 try {
-                    const pairRes = await axios.post(`${url}/instance/pair`, { phone }, { 
+                    const pairRes = await evolutionApi.post(`${url}/instance/pair`, { phone }, { 
                         headers: { 'apikey': instancia } 
                     });
                     result.pairingCode = pairRes.data?.data?.PairingCode || pairRes.data?.PairingCode || pairRes.data?.code || null;
@@ -140,9 +153,8 @@ export class EvolutionService {
 
         // --- EVOLUTION API (CLASSIC) FALLBACK LOGIC ---
         try {
-            // Setup Webhook
             try {
-                await axios.post(`${url}/webhook/set/${instancia}`, {
+                await evolutionApi.post(`${url}/webhook/set/${instancia}`, {
                     webhook: {
                         enabled: true,
                         url: WEBHOOK_URL,
@@ -156,7 +168,7 @@ export class EvolutionService {
             let urlStr = `${url}/instance/connect/${instancia}`;
             if (phone) urlStr += `?phone=${phone}`;
             
-            const connectResponse = await axios.get(urlStr, {
+            const connectResponse = await evolutionApi.get(urlStr, {
                 headers: { 'apikey': key }
             });
 
@@ -168,7 +180,7 @@ export class EvolutionService {
             return finalData;
 
         } catch (finalErr: any) {
-            console.error("Evolution API Classic Error:", finalErr.response?.data || finalErr.message);
+            logger.error({ err: finalErr.response?.data || finalErr.message, instancia }, "Evolution API Classic Error");
             return { base64: null, error: "Falha ao conectar na instancia. Verifique os logs." };
         }
     }
