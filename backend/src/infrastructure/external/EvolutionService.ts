@@ -64,7 +64,7 @@ export class EvolutionService {
             }, { headers: { 'apikey': key } });
         } catch (e: any) {
             logger.error({ err: e.response?.data || e.message, instancia }, "Evolution Create Error");
-            throw e;
+            // Do NOT throw e here, because if the instance already exists we still want to save it in DB
         }
     }
 
