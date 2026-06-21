@@ -49,8 +49,8 @@ export class EvolutionService {
                 headers: { 'apikey': EVO_KEY }
             });
         } catch (err: any) {
-            if (err.response?.status === 404 || err.response?.status === 401 || err.response?.status === 403) {
-                console.log("Detectado Evolution Go, conectando por rota alternativa...");
+            if (err.response?.status === 404 || err.response?.status === 401 || err.response?.status === 403 || err.response?.status === 405) {
+                console.log("Detectado Evolution Go, conectando por rotas nativas...");
                 
                 try {
                     // Tentar setar o webhook padrão do Evolution Go
@@ -64,12 +64,24 @@ export class EvolutionService {
                         }
                     }, { headers: { 'apikey': EVO_KEY } }).catch(() => {});
 
-                    let connectUrl = `${EVO_URL}/instance/connect/${instancia}`;
-                    if (phone) connectUrl += `?number=${phone}`;
+                    // 1. Iniciar conexão (POST /instance/connect na Evo Go)
+                    await axios.post(`${EVO_URL}/instance/connect`, {}, { 
+                        headers: { 'apikey': instancia } 
+                    }).catch(() => {}); // ignore se já estiver conectando
                     
-                    connectResponse = await axios.get(connectUrl, { 
-                        headers: { 'apikey': EVO_KEY } 
-                    });
+                    if (phone) {
+                        // 2. Pedir Pairing Code
+                        const pairRes = await axios.post(`${EVO_URL}/instance/pair`, { phone }, { 
+                            headers: { 'apikey': instancia } 
+                        });
+                        return { pairingCode: pairRes.data?.data?.PairingCode || pairRes.data?.PairingCode };
+                    } else {
+                        // 3. Pegar QR Code
+                        const qrRes = await axios.get(`${EVO_URL}/instance/qr`, { 
+                            headers: { 'apikey': instancia } 
+                        });
+                        return { base64: qrRes.data?.data?.Qrcode || qrRes.data?.Qrcode };
+                    }
                 } catch(e: any) { 
                     console.log('Aviso: Falha ao conectar no Evolution Go', e.response?.data || e.message); 
                     throw e;

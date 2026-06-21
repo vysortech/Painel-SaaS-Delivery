@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import axios from 'axios';
 import { ConfigRepository } from '../repositories/ConfigRepository';
+import { EvolutionService } from '../services/EvolutionService';
 
 const router = Router();
 
@@ -32,15 +33,8 @@ router.get('/qrcode/:token', async (req: Request, res: Response) => {
             // Ignore if not connected yet
         }
 
-        const qrRes = await axios.get(`${EVO_URL}/instance/qr?instance=${instancia}`, {
-            headers: { 'apikey': instancia }
-        });
-
-        let finalData = qrRes.data;
-        if (!finalData.base64) {
-            const qr = finalData.qrcode || finalData.Qrcode || finalData.data?.qrcode || finalData.data?.Qrcode || finalData.data?.base64;
-            if (qr) finalData.base64 = qr;
-        }
+        const phone = req.query.phone as string | undefined;
+        const finalData = await EvolutionService.getQrCodeOrStatus(instancia, phone);
 
         res.json({ connected: false, ...finalData, instanceName: instancia });
     } catch (err: any) {
