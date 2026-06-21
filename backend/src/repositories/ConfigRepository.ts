@@ -99,13 +99,13 @@ export class ConfigRepository {
 
     public static async updateConnectionStatusByToken(token: string, status: string): Promise<void> {
         await pool.query(
-            'UPDATE configuracoes SET status_conexao = $1 WHERE connect_token = $2',
+            'UPDATE configuracoes SET status_conexao = $1 WHERE connect_token = $2 OR instancia = $2',
             [status, token]
         );
     }
 
     public static async getByToken(token: string): Promise<TenantConfig | null> {
-        let result = await pool.query('SELECT * FROM configuracoes WHERE connect_token = $1', [token]);
+        let result = await pool.query('SELECT * FROM configuracoes WHERE connect_token = $1 OR instancia = $1', [token]);
         if (result.rows.length === 0) {
             result = await pool.query('SELECT * FROM configuracoes WHERE instancia = $1', [token]);
         }
