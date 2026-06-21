@@ -6,6 +6,14 @@ import type { TenantConfig } from '../types';
 
 const fetcher = (url: string) => api.get(url).then(res => res.data);
 
+const formatPhone = (val: string) => {
+    const raw = val.replace(/\D/g, '');
+    if (!raw) return '';
+    if (raw.length <= 2) return `(${raw}`;
+    if (raw.length <= 7) return `(${raw.slice(0, 2)}) ${raw.slice(2)}`;
+    return `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7, 11)}`;
+};
+
 const TagInput = ({ label, placeholder, tags, setTags, isPhone = false, isNumericOnly = false }: { label: string, placeholder: string, tags: string[], setTags: (t: string[]) => void, isPhone?: boolean, isNumericOnly?: boolean }) => {
   const [inputValue, setInputValue] = useState(isPhone ? '55' : '');
 
@@ -33,6 +41,8 @@ const TagInput = ({ label, placeholder, tags, setTags, isPhone = false, isNumeri
       setInputValue(val);
   };
 
+  const displayValue = isPhone ? formatPhone(inputValue.replace(/^55/, '')) : inputValue;
+
   return (
     <div>
       <label className="block text-sm font-medium text-gray-300 mb-1">{label}</label>
@@ -41,7 +51,7 @@ const TagInput = ({ label, placeholder, tags, setTags, isPhone = false, isNumeri
           type="text" 
           className="flex-1 bg-[#18181b] border border-gray-700/50 rounded-lg p-2.5 text-white text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
           placeholder={placeholder}
-          value={inputValue}
+          value={displayValue}
           onChange={handleChange}
           onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAdd())}
         />
@@ -49,16 +59,18 @@ const TagInput = ({ label, placeholder, tags, setTags, isPhone = false, isNumeri
           <Plus className="w-5 h-5" />
         </button>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {tags.map((tag, index) => (
-          <span key={index} className="px-3 py-1 bg-gray-800 border border-gray-700 text-gray-200 rounded-full text-sm flex items-center gap-2">
-            {tag}
-            <button type="button" onClick={() => handleRemove(index)} className="hover:text-red-400">
-              <X className="w-3 h-3" />
-            </button>
-          </span>
-        ))}
-      </div>
+      {tags.length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-2">
+          {tags.map((tag, index) => (
+            <span key={index} className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-sm">
+              {isPhone ? `+55 ${formatPhone(tag.replace(/^55/, ''))}` : tag}
+              <button type="button" onClick={() => handleRemove(index)} className="hover:text-emerald-300 ml-1">
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -361,7 +373,7 @@ export default function Clients() {
                          </div>
                          <div>
                              <label className="flex items-center justify-between text-sm font-medium text-gray-300 mb-1">
-                                 Nome do Canal (Instância) *
+                                 Nome do Canal (Instância) <span className="text-red-500">*</span>
                              </label>
                              <input required disabled={!!editingTenant} type="text" 
                                 className="w-full bg-[#131316] border border-gray-800 rounded-lg p-3 text-gray-400 outline-none focus:border-[#0ea5e9]"
@@ -376,14 +388,16 @@ export default function Clients() {
                      <div>
                          <label className="block text-sm font-medium text-gray-300 mb-1">Número do WhatsApp Principal</label>
                          <div className="flex">
-                             <span className="bg-[#131316] border border-gray-800 border-r-0 rounded-l-lg p-3 text-gray-500 font-medium text-sm flex items-center justify-center min-w-[3rem]">BR +55</span>
+                             <span className="bg-[#131316] border border-gray-800 border-r-0 rounded-l-lg px-4 py-3 text-gray-400 font-medium text-sm flex items-center justify-center whitespace-nowrap gap-2">
+                                <span className="text-lg">🇧🇷</span> +55
+                             </span>
                              <input type="text" 
                                 className="w-full bg-[#18181b] border border-gray-700/50 rounded-r-lg p-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all placeholder-gray-600"
-                                placeholder="DDD + Número (Que vai conectar no painel)"
-                                value={formData.telefone_whatsapp ? formData.telefone_whatsapp.replace(/^55/, '') : ''}
+                                placeholder="(11) 99999-9999"
+                                value={formatPhone(formData.telefone_whatsapp?.replace(/^55/, '') || '')}
                                 onChange={e => {
                                    const val = e.target.value.replace(/\D/g, '');
-                                   setFormData({...formData, telefone_whatsapp: val ? '55' + val : ''});
+                                   setFormData({...formData, telefone_whatsapp: val ? '55' + val.slice(0, 11) : ''});
                                 }}
                              />
                          </div>
@@ -450,10 +464,11 @@ export default function Clients() {
 
                         <TagInput 
                             label="Telefones Admins (conversam com bot)" 
-                            placeholder="Ex: 5511999999999" 
+                            placeholder="Ex: (11) 99999-9999" 
                             tags={telefones} 
                             setTags={setTelefones} 
                             isNumericOnly={true}
+                            isPhone={true}
                         />
                         
                         <TagInput 
