@@ -282,7 +282,7 @@ export default function Clients() {
                                     try {
                                         await api.post(`/config/${tenant.instancia}/logout`);
                                         showToast('WhatsApp desconectado!', 'success');
-                                        fetchTenants();
+                                        mutate();
                                     } catch(e) {
                                         showToast('Erro ao desconectar.', 'error');
                                     }
@@ -293,8 +293,7 @@ export default function Clients() {
                         ) : (
                             <button onClick={() => {
                                 const token = tenant.connect_token || tenant.instancia;
-                                setCreatedLink(`${window.location.origin}/conectar/${token}`);
-                                setShowConnectionModal(true);
+                                setCreatedLinkModal(`${window.location.origin}/conectar/${token}`);
                             }} title="Conectar WhatsApp" className="px-3 py-1.5 text-xs text-emerald-400 hover:bg-emerald-500/20 rounded font-semibold border border-emerald-500/30 flex items-center gap-1 transition-all">
                                 <Plus className="w-3 h-3"/> Conectar
                             </button>

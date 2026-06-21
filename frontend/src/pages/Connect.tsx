@@ -65,30 +65,7 @@ export default function Connect() {
         };
     }, [instancia, status, requestingPairing]);
 
-    const handleRequestPairing = async () => {
-        if (!phone || phone.length < 10) return;
-        setRequestingPairing(true);
-        setStatus('loading');
-        try {
-            const res = await api.get(`/public/whatsapp/qrcode/${instancia}?phone=${phone.replace(/\D/g, '')}`);
-            const data = res.data;
-            if (data.connected || data.status === 'CONNECTED' || data.status === 'OPEN') {
-                setStatus('connected');
-            } else if (data.status === 'CONNECTING') {
-                setStatus('loading');
-            } else if (data.base64 || data.pairingCode || data.code) {
-                setStatus('qr_and_pairing');
-                if (data.base64) setQrCode(data.base64);
-                if (data.pairingCode || data.code) setPairingCode(data.pairingCode || data.code);
-            } else {
-                setStatus('error');
-            }
-        } catch {
-            setStatus('error');
-        } finally {
-            setRequestingPairing(false);
-        }
-    };
+
 
     return (
         <div className="min-h-screen bg-[#09090b] flex items-center justify-center p-4">
