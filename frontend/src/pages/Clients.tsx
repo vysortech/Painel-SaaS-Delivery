@@ -366,6 +366,37 @@ export default function Clients() {
                     </div>
                  </div>
 
+                 <div className="bg-gray-900/50 p-5 rounded-xl border border-gray-800 col-span-2 space-y-4">
+                    <h3 className="text-lg font-semibold text-emerald-400 border-b border-gray-800 pb-2">Configurações da Instância (Evolution Go)</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                            <input type="checkbox" className="w-4 h-4 rounded border-gray-700 bg-gray-800 text-blue-600 focus:ring-blue-500" 
+                                checked={formData.sempre_online || false} onChange={e => setFormData({...formData, sempre_online: e.target.checked})} />
+                            Sempre Online
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                            <input type="checkbox" className="w-4 h-4 rounded border-gray-700 bg-gray-800 text-blue-600 focus:ring-blue-500" 
+                                checked={formData.rejeitar_chamadas || false} onChange={e => setFormData({...formData, rejeitar_chamadas: e.target.checked})} />
+                            Rejeitar Chamadas
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                            <input type="checkbox" className="w-4 h-4 rounded border-gray-700 bg-gray-800 text-blue-600 focus:ring-blue-500" 
+                                checked={formData.marcar_lidas || false} onChange={e => setFormData({...formData, marcar_lidas: e.target.checked})} />
+                            Marcar como Lidas
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                            <input type="checkbox" className="w-4 h-4 rounded border-gray-700 bg-gray-800 text-blue-600 focus:ring-blue-500" 
+                                checked={formData.ignorar_grupos || false} onChange={e => setFormData({...formData, ignorar_grupos: e.target.checked})} />
+                            Ignorar Grupos
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                            <input type="checkbox" className="w-4 h-4 rounded border-gray-700 bg-gray-800 text-blue-600 focus:ring-blue-500" 
+                                checked={formData.ignorar_status || false} onChange={e => setFormData({...formData, ignorar_status: e.target.checked})} />
+                            Ignorar Status
+                        </label>
+                    </div>
+                 </div>
+
                  <div className="bg-gray-900/50 p-5 rounded-xl border border-gray-800 space-y-4 col-span-2">
                     <h3 className="text-lg font-semibold text-orange-400 border-b border-gray-800 pb-2">Contexto Específico & Cardápio da Loja</h3>
                     <div>

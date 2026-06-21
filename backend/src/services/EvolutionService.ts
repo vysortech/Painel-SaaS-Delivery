@@ -20,6 +20,16 @@ export class EvolutionService {
         }
     }
 
+    public static async updateAdvancedSettings(instancia: string, settings: any): Promise<void> {
+        try {
+            await axios.put(`${EVO_URL}/instance/${instancia}/advanced-settings`, settings, {
+                headers: { 'apikey': instancia, 'Content-Type': 'application/json' }
+            });
+        } catch (e: any) {
+            console.error(`Evolution Update Settings Error for ${instancia}:`, e.response?.data || e.message);
+        }
+    }
+
     public static async getQrCodeOrStatus(instancia: string, phone?: string): Promise<any> {
         let defaultWebhook = 'https://n8n1.vysortech.app.br/webhook/9b37f408-861d-4cb8-beb3-1f66ef0233d7/:instancia';
         let webhookTemplate = process.env.WEBHOOK_URL || defaultWebhook;

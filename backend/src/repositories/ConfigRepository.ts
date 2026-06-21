@@ -25,6 +25,11 @@ export class ConfigRepository {
             ALTER TABLE configuracoes ADD COLUMN IF NOT EXISTS dias_carencia INT DEFAULT 0;
             ALTER TABLE configuracoes ADD COLUMN IF NOT EXISTS connect_token VARCHAR(255);
             ALTER TABLE configuracoes ADD COLUMN IF NOT EXISTS status_conexao VARCHAR(50) DEFAULT 'PENDING';
+            ALTER TABLE configuracoes ADD COLUMN IF NOT EXISTS sempre_online BOOLEAN DEFAULT false;
+            ALTER TABLE configuracoes ADD COLUMN IF NOT EXISTS rejeitar_chamadas BOOLEAN DEFAULT false;
+            ALTER TABLE configuracoes ADD COLUMN IF NOT EXISTS marcar_lidas BOOLEAN DEFAULT false;
+            ALTER TABLE configuracoes ADD COLUMN IF NOT EXISTS ignorar_grupos BOOLEAN DEFAULT false;
+            ALTER TABLE configuracoes ADD COLUMN IF NOT EXISTS ignorar_status BOOLEAN DEFAULT false;
         `);
         // Fallback para colunas legadas
         await pool.query(`ALTER TABLE configuracoes ALTER COLUMN chave DROP NOT NULL;`).catch(() => {});
@@ -56,15 +61,18 @@ export class ConfigRepository {
                 instancia, nome_empresa, nome_admin, telefone_admin, chave_pix, nome_pix, 
                 modelo_ia_cliente, modelo_ia_admin, nome_atendente, botoes_tempo, 
                 valor_assinatura, data_vencimento, status_assinatura, plano_tipo, contexto_loja, dias_carencia,
-                connect_token, status_conexao
+                connect_token, status_conexao,
+                sempre_online, rejeitar_chamadas, marcar_lidas, ignorar_grupos, ignorar_status
             ) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
         `, [
             tenant.instancia, tenant.nome_empresa, tenant.nome_admin, tenant.telefone_admin, tenant.chave_pix, tenant.nome_pix, 
             tenant.modelo_ia_cliente || '', tenant.modelo_ia_admin || '', tenant.nome_atendente, tenant.botoes_tempo, 
             tenant.valor_assinatura || 0, tenant.data_vencimento || null, tenant.status_assinatura || 'ativo', 
             tenant.plano_tipo || 'recorrente', tenant.contexto_loja || '', tenant.dias_carencia || 0,
-            connectToken, 'PENDING'
+            connectToken, 'PENDING',
+            tenant.sempre_online || false, tenant.rejeitar_chamadas || false, tenant.marcar_lidas || false,
+            tenant.ignorar_grupos || false, tenant.ignorar_status || false
         ]);
     }
 
@@ -74,13 +82,17 @@ export class ConfigRepository {
                 nome_empresa = $1, nome_admin = $2, telefone_admin = $3, chave_pix = $4, nome_pix = $5, 
                 modelo_ia_cliente = $6, modelo_ia_admin = $7, nome_atendente = $8, botoes_tempo = $9,
                 valor_assinatura = $10, data_vencimento = $11, status_assinatura = $12, plano_tipo = $13, 
-                contexto_loja = $14, dias_carencia = $15
-            WHERE instancia = $16
+                contexto_loja = $14, dias_carencia = $15,
+                sempre_online = $16, rejeitar_chamadas = $17, marcar_lidas = $18, ignorar_grupos = $19, ignorar_status = $20
+            WHERE instancia = $21
         `, [
             tenant.nome_empresa, tenant.nome_admin, tenant.telefone_admin, tenant.chave_pix, tenant.nome_pix, 
             tenant.modelo_ia_cliente || '', tenant.modelo_ia_admin || '', tenant.nome_atendente, tenant.botoes_tempo,
             tenant.valor_assinatura, tenant.data_vencimento || null, tenant.status_assinatura, tenant.plano_tipo, 
-            tenant.contexto_loja, tenant.dias_carencia, instancia
+            tenant.contexto_loja, tenant.dias_carencia, 
+            tenant.sempre_online || false, tenant.rejeitar_chamadas || false, tenant.marcar_lidas || false, 
+            tenant.ignorar_grupos || false, tenant.ignorar_status || false,
+            instancia
         ]);
     }
 

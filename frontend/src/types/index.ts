@@ -17,6 +17,11 @@ export interface TenantConfig {
     dias_carencia: number;
     connect_token?: string;
     status_conexao?: 'PENDING' | 'CONNECTED' | 'DISCONNECTED' | 'ERROR';
+    sempre_online?: boolean;
+    rejeitar_chamadas?: boolean;
+    marcar_lidas?: boolean;
+    ignorar_grupos?: boolean;
+    ignorar_status?: boolean;
 }
 
 export interface User {

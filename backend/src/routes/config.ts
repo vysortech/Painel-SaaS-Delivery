@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { ConfigRepository } from '../repositories/ConfigRepository';
 import { TenantConfig } from '../interfaces/Config';
 import crypto from 'crypto';
+import { EvolutionService } from '../services/EvolutionService';
 
 const router = Router();
 
@@ -35,6 +36,18 @@ router.post('/', async (req: Request, res: Response) => {
 
     try {
         await ConfigRepository.create(tenant, connectToken);
+        
+        // Sync advanced settings with Evolution Go
+        if (tenant.instancia) {
+            await EvolutionService.updateAdvancedSettings(tenant.instancia, {
+                alwaysOnline: tenant.sempre_online,
+                rejectCall: tenant.rejeitar_chamadas,
+                readMessages: tenant.marcar_lidas,
+                ignoreGroups: tenant.ignorar_grupos,
+                ignoreStatus: tenant.ignorar_status
+            });
+        }
+
         res.status(201).json({ message: 'Tenant criado com sucesso' });
     } catch (err: any) {
         console.error('ERRO INSERT:', err.message);
@@ -49,6 +62,16 @@ router.put('/:instancia', async (req: Request, res: Response) => {
     
     try {
         await ConfigRepository.update(instancia, tenant);
+
+        // Sync advanced settings with Evolution Go
+        await EvolutionService.updateAdvancedSettings(instancia, {
+            alwaysOnline: tenant.sempre_online,
+            rejectCall: tenant.rejeitar_chamadas,
+            readMessages: tenant.marcar_lidas,
+            ignoreGroups: tenant.ignorar_grupos,
+            ignoreStatus: tenant.ignorar_status
+        });
+
         res.json({ message: 'Tenant atualizado com sucesso' });
     } catch (err: any) {
         console.error('ERRO UPDATE:', err.message);

@@ -81,77 +81,88 @@ export default function Connect() {
         }
     };
 
-    return (
-        <div className="min-h-screen bg-[#0B0F19] flex items-center justify-center p-4">
-            <div className="max-w-md w-full bg-[#111827] border border-gray-800 rounded-2xl p-8 shadow-2xl text-center space-y-6">
+        <div className="min-h-screen bg-[#09090b] flex items-center justify-center p-4">
+            <div className="max-w-md w-full bg-[#18181b] border border-[#27272a] rounded-2xl p-8 shadow-2xl flex flex-col items-center">
                 
-                <div className="w-16 h-16 bg-blue-500/10 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Smartphone className="w-8 h-8" />
-                </div>
+                <h1 className="text-xl font-bold text-white mb-6">Conectar WhatsApp</h1>
 
-                <h1 className="text-2xl font-bold text-white">Conectar WhatsApp</h1>
-                
-                {status !== 'connected' && (
-                    <p className="text-gray-400 text-sm">
-                        Escaneie o QR Code abaixo ou solicite um código de conexão para o seu número.
-                    </p>
-                )}
-
-                <div className="bg-white p-4 rounded-xl flex flex-col items-center justify-center min-h-[250px] relative">
+                <div className="bg-white p-4 rounded-xl w-full flex flex-col items-center justify-center min-h-[300px] shadow-inner relative">
                     {status === 'loading' && (
                         <div className="flex flex-col items-center text-gray-500">
-                            <Loader2 className="w-10 h-10 animate-spin mb-2 text-blue-500" />
+                            <Loader2 className="w-10 h-10 animate-spin mb-2 text-[#0ea5e9]" />
                             <p className="font-medium">Carregando conexão...</p>
                         </div>
                     )}
                     
                     {status === 'qr' && qrCode && (
-                        <img src={qrCode} alt="QR Code WhatsApp" className="w-full h-auto max-w-[250px] mx-auto rounded" />
+                        <img src={qrCode} alt="QR Code WhatsApp" className="w-full h-auto max-w-[280px] mx-auto rounded-lg" />
                     )}
 
                     {status === 'pairing' && pairingCode && (
                         <div className="flex flex-col items-center justify-center text-gray-800 p-4">
-                            <Hash className="w-12 h-12 text-blue-500 mb-2" />
-                            <p className="font-semibold mb-2">Seu Código de Conexão:</p>
-                            <div className="text-4xl font-black tracking-widest text-blue-600 bg-blue-50 px-6 py-3 rounded-xl border border-blue-200">
+                            <Hash className="w-12 h-12 text-[#0ea5e9] mb-4" />
+                            <div className="text-4xl font-black tracking-widest text-[#0284c7] bg-[#f0f9ff] px-6 py-4 rounded-xl border border-[#bae6fd] shadow-sm">
                                 {pairingCode}
                             </div>
-                            <p className="text-xs text-gray-500 mt-4 text-center">Digite este código no WhatsApp quando for notificado.</p>
                         </div>
                     )}
 
                     {status === 'connected' && (
-                        <div className="flex flex-col items-center text-emerald-500">
+                        <div className="flex flex-col items-center text-[#10b981]">
                             <CheckCircle2 className="w-16 h-16 mb-2" />
-                            <p className="font-bold text-lg">WhatsApp Conectado!</p>
-                            <p className="text-sm text-gray-500 mt-2 text-center">Seu robô de atendimento já está pronto para uso. Você pode fechar esta tela.</p>
+                            <p className="font-bold text-lg">Conectado com Sucesso</p>
                         </div>
                     )}
 
                     {status === 'error' && (
-                        <div className="flex flex-col items-center text-red-500">
+                        <div className="flex flex-col items-center text-[#ef4444]">
                             <AlertCircle className="w-12 h-12 mb-2" />
                             <p className="font-bold">Erro de conexão</p>
-                            <p className="text-xs text-gray-500 mt-1">O link pode ser inválido ou a instância não está pronta.</p>
+                            <p className="text-xs text-gray-500 mt-1 text-center">Tente atualizar a página.</p>
                         </div>
                     )}
                 </div>
 
+                {status === 'qr' && (
+                    <div className="mt-6 flex flex-col items-center">
+                        <p className="text-[#a1a1aa] text-sm mb-3">Escaneie este QR Code com seu WhatsApp</p>
+                        <div className="flex items-center gap-2 text-sm text-[#71717a]">
+                            <span className="w-2 h-2 rounded-full bg-[#3b82f6] animate-pulse"></span>
+                            Aguardando conexão...
+                        </div>
+                    </div>
+                )}
+                {status === 'pairing' && (
+                    <div className="mt-6 flex flex-col items-center">
+                        <p className="text-[#a1a1aa] text-sm mb-3">Digite este código no WhatsApp</p>
+                        <div className="flex items-center gap-2 text-sm text-[#71717a]">
+                            <span className="w-2 h-2 rounded-full bg-[#3b82f6] animate-pulse"></span>
+                            Aguardando aprovação...
+                        </div>
+                    </div>
+                )}
+                {status === 'connected' && (
+                    <div className="mt-6 flex flex-col items-center text-center">
+                        <p className="text-[#a1a1aa] text-sm">Seu WhatsApp já está conectado e operante.</p>
+                        <p className="text-[#a1a1aa] text-sm mt-1">Pode fechar esta página com segurança.</p>
+                    </div>
+                )}
+
                 {(status === 'qr' || status === 'error') && (
-                    <div className="mt-4 border-t border-gray-800 pt-6">
-                        <p className="text-sm text-gray-400 mb-3">Está no celular? Conecte com código:</p>
+                    <div className="mt-8 w-full border-t border-[#27272a] pt-6">
+                        <p className="text-xs text-[#71717a] mb-3 text-center uppercase tracking-wider font-semibold">Conectar pelo Celular (Pairing Code)</p>
                         <div className="flex gap-2">
                             <input 
                                 type="text" 
-                                placeholder="DDI + DDD + Número (Ex: 55119...)"
+                                placeholder="DDI + DDD + Número (Ex: 5511...)"
                                 value={phone}
                                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                                className="flex-1 bg-gray-900 border border-gray-700 rounded-lg p-3 text-white text-sm outline-none focus:border-blue-500"
+                                className="flex-1 bg-[#27272a] border border-[#3f3f46] rounded-lg p-2.5 text-white text-sm outline-none focus:border-[#0ea5e9] transition-colors"
                             />
                             <button 
                                 onClick={handleRequestPairing}
                                 disabled={requestingPairing || phone.length < 10}
-                                className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+                                className="bg-[#27272a] border border-[#3f3f46] hover:bg-[#3f3f46] disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-lg font-medium text-sm transition-colors"
                             >
                                 Gerar Código
                             </button>
