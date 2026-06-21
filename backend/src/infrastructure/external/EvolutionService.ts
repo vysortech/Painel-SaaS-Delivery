@@ -68,16 +68,101 @@ export class EvolutionService {
         }
     }
 
-    public static async connectInstance(instancia: string): Promise<any> {
+    public static async connectInstance(instancia: string, phone?: string): Promise<any> {
         const { url, key } = await this.getCredentials();
+        const WEBHOOK_URL = process.env.WEBHOOK_URL || 'http://localhost:4000/api/whatsapp/webhooks';
+        
+        let isEvoGo = false;
+        let evoGoState = '';
+
+        // 1. Check Evo Go status directly using instance token
         try {
-            const res = await evolutionApi.get(`${url}/instance/connect/${instancia}`, {
+            const statusRes = await evolutionApi.get(`${url}/instance/status`, {
+                headers: { 'apikey': instancia }
+            });
+            isEvoGo = true;
+            evoGoState = statusRes.data?.instance?.state || statusRes.data?.state || '';
+        } catch (e) {}
+
+        if (!isEvoGo) {
+            await this.createInstance(instancia).catch(() => {});
+            
+            try {
+                const statusRes = await evolutionApi.get(`${url}/instance/status`, {
+                    headers: { 'apikey': instancia }
+                });
+                isEvoGo = true;
+                evoGoState = statusRes.data?.instance?.state || statusRes.data?.state || '';
+            } catch (e) {}
+        }
+
+        if (isEvoGo) {
+            if (evoGoState === 'open' || evoGoState === 'CONNECTED') {
+                return { connected: true, status: 'CONNECTED' };
+            }
+
+            if (evoGoState !== 'connecting') {
+                try {
+                    await evolutionApi.post(`${url}/webhook/set/${instancia}`, {
+                        webhook: {
+                            enabled: true,
+                            url: WEBHOOK_URL,
+                            webhookByEvents: false,
+                            events: ["QRCODE_UPDATED", "MESSAGES_UPSERT", "CONNECTION_UPDATE"]
+                        }
+                    }, { headers: { 'apikey': key } }).catch(() => {});
+
+                    await evolutionApi.post(`${url}/instance/connect`, {
+                        webhookUrl: WEBHOOK_URL
+                    }, { headers: { 'apikey': instancia } });
+                    
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                } catch(e: any) {
+                    logger.error({ err: e.response?.data || e.message, instancia }, "Evolution Go Connect Error");
+                }
+            }
+
+            let result: any = { base64: null, pairingCode: null, status: evoGoState.toUpperCase() };
+            
+            try {
+                const qrRes = await evolutionApi.get(`${url}/instance/qr`, { 
+                    headers: { 'apikey': instancia } 
+                });
+                result.base64 = qrRes.data?.data?.Qrcode || qrRes.data?.Qrcode || qrRes.data?.base64 || null;
+            } catch(e) {}
+
+            return result;
+        }
+
+        // --- EVOLUTION API (CLASSIC) FALLBACK LOGIC ---
+        try {
+            try {
+                await evolutionApi.post(`${url}/webhook/set/${instancia}`, {
+                    webhook: {
+                        enabled: true,
+                        url: WEBHOOK_URL,
+                        webhookByEvents: false,
+                        events: ["QRCODE_UPDATED", "MESSAGES_UPSERT", "CONNECTION_UPDATE"]
+                    }
+                }, { headers: { 'apikey': key } }).catch(() => {});
+            } catch(e) {}
+
+            let urlStr = `${url}/instance/connect/${instancia}`;
+            if (phone) urlStr += `?phone=${phone}`;
+            
+            const connectResponse = await evolutionApi.get(urlStr, {
                 headers: { 'apikey': key }
             });
-            return res.data;
-        } catch (e: any) {
-            logger.error({ err: e.response?.data || e.message, instancia }, "Evolution Connect Error");
-            throw e;
+
+            let finalData: any = {};
+            finalData.base64 = connectResponse.data?.base64 || connectResponse.data?.qrcode?.base64 || null;
+            finalData.pairingCode = connectResponse.data?.pairingCode || connectResponse.data?.code || null;
+            
+            return finalData;
+
+        } catch (finalErr: any) {
+            logger.error({ err: finalErr.response?.data || finalErr.message, instancia }, "Evolution API Classic Error");
+            return { base64: null, error: "Falha ao conectar na instancia. Verifique os logs." };
         }
     }
 
