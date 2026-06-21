@@ -237,23 +237,25 @@ export default function Clients() {
                 {filteredTenants.map((tenant: TenantConfig) => (
                   <tr key={tenant.instancia} className="hover:bg-gray-800/20 transition-colors group">
                     <td className="p-4">
-                      <div className="font-bold text-white text-base">{tenant.nome_empresa}</div>
-                      <div className="text-xs text-blue-400 font-mono mt-1">{tenant.instancia}</div>
-                      <div className="mt-2">
-                        {tenant.status_conexao === 'CONNECTED' ? (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">
-                                🟢 Conectado
-                            </span>
-                        ) : tenant.status_conexao === 'PENDING' ? (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 uppercase tracking-wider">
-                                🟡 Aguardando Conexão
-                            </span>
-                        ) : (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20 uppercase tracking-wider">
-                                🔴 Desconectado
-                            </span>
-                        )}
+                      <div className="flex items-center gap-3">
+                         <div className="font-bold text-white text-base">{tenant.nome_empresa}</div>
+                         <div>
+                            {tenant.status_conexao === 'CONNECTED' ? (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">
+                                    🟢 Conectado
+                                </span>
+                            ) : tenant.status_conexao === 'PENDING' ? (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 uppercase tracking-wider">
+                                    🟡 Aguardando Conexão
+                                </span>
+                            ) : (
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20 uppercase tracking-wider">
+                                    🔴 Desconectado
+                                </span>
+                            )}
+                         </div>
                       </div>
+                      <div className="text-xs text-blue-400 font-mono mt-1">{tenant.instancia}</div>
                     </td>
                     <td className="p-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1
@@ -274,13 +276,29 @@ export default function Clients() {
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => {
-                            const token = tenant.connect_token || tenant.instancia;
-                            navigator.clipboard.writeText(`${window.location.origin}/conectar/${token}`);
-                            showToast('Link de conexão copiado!', 'success');
-                        }} title="Copiar Link do QR Code" className="p-2 text-indigo-400 hover:bg-indigo-500/20 rounded">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-                        </button>
+                        {tenant.status_conexao === 'CONNECTED' ? (
+                            <button onClick={async () => {
+                                if (window.confirm('Tem certeza que deseja desconectar o WhatsApp?')) {
+                                    try {
+                                        await api.post(`/config/${tenant.instancia}/logout`);
+                                        showToast('WhatsApp desconectado!', 'success');
+                                        fetchTenants();
+                                    } catch(e) {
+                                        showToast('Erro ao desconectar.', 'error');
+                                    }
+                                }
+                            }} title="Desconectar WhatsApp" className="px-3 py-1.5 text-xs text-orange-400 hover:bg-orange-500/20 rounded font-semibold border border-orange-500/30 flex items-center gap-1 transition-all">
+                                <Power className="w-3 h-3"/> Desconectar
+                            </button>
+                        ) : (
+                            <button onClick={() => {
+                                const token = tenant.connect_token || tenant.instancia;
+                                setCreatedLink(`${window.location.origin}/conectar/${token}`);
+                                setShowConnectionModal(true);
+                            }} title="Conectar WhatsApp" className="px-3 py-1.5 text-xs text-emerald-400 hover:bg-emerald-500/20 rounded font-semibold border border-emerald-500/30 flex items-center gap-1 transition-all">
+                                <Plus className="w-3 h-3"/> Conectar
+                            </button>
+                        )}
                         <button onClick={() => handleToggleStatus(tenant)} title={tenant.status_assinatura === 'ativo' ? 'Bloquear' : 'Desbloquear'} 
                           className={`p-2 rounded ${tenant.status_assinatura === 'ativo' ? 'text-red-400 hover:bg-red-500/20' : 'text-emerald-400 hover:bg-emerald-500/20'}`}>
                           <Power className="w-4 h-4" />

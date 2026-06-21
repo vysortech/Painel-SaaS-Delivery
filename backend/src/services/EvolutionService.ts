@@ -10,6 +10,17 @@ export class EvolutionService {
         };
     }
 
+    public static async logoutInstance(instancia: string): Promise<void> {
+        const { url, key } = await this.getCredentials();
+        try {
+            await axios.delete(`${url}/instance/logout/${instancia}`, {
+                headers: { 'apikey': key }
+            });
+        } catch (e: any) {
+            console.error("Evolution Logout Error:", e.response?.data || e.message);
+        }
+    }
+
     public static async createInstance(instancia: string): Promise<void> {
         const { url, key } = await this.getCredentials();
         try {

@@ -80,6 +80,18 @@ router.put('/:instancia', async (req: Request, res: Response) => {
     }
 });
 
+router.post('/:instancia/logout', async (req: Request, res: Response) => {
+    const { instancia } = req.params;
+    try {
+        await EvolutionService.logoutInstance(instancia);
+        await ConfigRepository.update(instancia, { status_conexao: 'PENDING' });
+        res.json({ message: 'Instância desconectada com sucesso' });
+    } catch (err: any) {
+        console.error('ERRO LOGOUT:', err.message);
+        res.status(500).json({ error: 'Erro ao desconectar empresa', details: err.message });
+    }
+});
+
 router.delete('/:instancia', async (req: Request, res: Response) => {
     const { instancia } = req.params;
     try {
