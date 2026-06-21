@@ -438,30 +438,32 @@ export default function Clients() {
                  </div>
                  
                  <div className="p-6 space-y-6">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Nome do Agente (Robô) <span className="text-red-500">*</span></label>
-                        <input required type="text" 
-                            className="w-full bg-[#18181b] border border-gray-700/50 rounded-lg p-3 text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all placeholder-gray-600" 
-                            placeholder="Ex: Alice, Robô do Zé"
-                            value={formData.nome_atendente || ''} onChange={e => setFormData({...formData, nome_atendente: e.target.value})} 
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-1">Nome do Agente (Robô) <span className="text-red-500">*</span></label>
+                            <input required type="text" 
+                                className="w-full bg-[#18181b] border border-gray-700/50 rounded-lg p-3 text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all placeholder-gray-600" 
+                                placeholder="Ex: Alice, Robô do Zé"
+                                value={formData.nome_atendente || ''} onChange={e => setFormData({...formData, nome_atendente: e.target.value})} 
+                            />
+                        </div>
+
+                        <TagInput 
+                            label="Telefones Admins (conversam com bot)" 
+                            placeholder="Ex: 5511999999999" 
+                            tags={telefones} 
+                            setTags={setTelefones} 
+                            isNumericOnly={true}
+                        />
+                        
+                        <TagInput 
+                            label="Tempo de Resposta (Minutos)" 
+                            placeholder="Ex: 10" 
+                            tags={botoesTempo} 
+                            setTags={setBotoesTempo} 
+                            isNumericOnly={true}
                         />
                     </div>
-
-                    <TagInput 
-                        label="Telefones de Administradores (Que vão conversar com o bot)" 
-                        placeholder="Adicionar número (DDD + Número) e aperte Enter" 
-                        tags={telefones} 
-                        setTags={setTelefones} 
-                        isNumericOnly={true}
-                    />
-                    
-                    <TagInput 
-                        label="Botões de Tempo de Resposta (Minutos)" 
-                        placeholder="Ex: 10" 
-                        tags={botoesTempo} 
-                        setTags={setBotoesTempo} 
-                        isNumericOnly={true}
-                    />
 
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-2">Contexto Específico (Regras / Preços / Cardápio)</label>
