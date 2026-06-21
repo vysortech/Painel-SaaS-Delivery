@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { AlertRepository } from '../../database/repositories/AlertRepository';
 import { authMiddleware } from '../middlewares/authMiddleware';
+import { validate } from '../middlewares/validateRequest';
+import { webhookAlertSchema } from '../../../application/dtos/AlertSchemas';
 
 const router = Router();
 
@@ -9,7 +11,7 @@ AlertRepository.initTable().catch(console.error);
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || '';
 
-router.post('/webhook', async (req: Request, res: Response) => {
+router.post('/webhook', validate(webhookAlertSchema), async (req: Request, res: Response) => {
     // Validate webhook secret if configured
     if (WEBHOOK_SECRET && req.headers['x-webhook-secret'] !== WEBHOOK_SECRET) {
         return res.status(403).json({ error: 'Forbidden' });

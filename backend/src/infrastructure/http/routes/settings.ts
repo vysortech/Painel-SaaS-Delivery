@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { GlobalSettingsRepository } from '../../database/repositories/GlobalSettingsRepository';
 import { authMiddleware } from '../middlewares/authMiddleware';
+import { validate } from '../middlewares/validateRequest';
+import { updateSettingsSchema } from '../../../application/dtos/SettingsSchemas';
 
 const router = Router();
 
@@ -19,7 +21,7 @@ router.get('/', async (req: Request, res: Response) => {
     }
 });
 
-router.put('/', async (req: Request, res: Response) => {
+router.put('/', validate(updateSettingsSchema), async (req: Request, res: Response) => {
     try {
         await GlobalSettingsRepository.save(req.body);
         res.json({ message: 'Configurações globais salvas' });

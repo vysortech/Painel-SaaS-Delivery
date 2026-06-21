@@ -4,6 +4,8 @@ import { TenantConfig } from '../../../domain/entities/Config';
 import crypto from 'crypto';
 import { EvolutionService } from '../../external/EvolutionService';
 import { authMiddleware } from '../middlewares/authMiddleware';
+import { validate } from '../middlewares/validateRequest';
+import { createTenantSchema, updateTenantSchema } from '../../../application/dtos/ConfigSchemas';
 
 const router = Router();
 
@@ -36,7 +38,7 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // Create new tenant
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', validate(createTenantSchema), async (req: Request, res: Response) => {
     const tenant: Partial<TenantConfig> = req.body;
     const connectToken = crypto.randomBytes(16).toString('hex');
 
@@ -63,7 +65,7 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // Update tenant
-router.put('/:instancia', async (req: Request, res: Response) => {
+router.put('/:instancia', validate(updateTenantSchema), async (req: Request, res: Response) => {
     const { instancia } = req.params;
     const tenant: Partial<TenantConfig> = req.body;
     

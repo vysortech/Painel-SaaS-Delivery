@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { UserRepository } from '../../database/repositories/UserRepository';
 import { authMiddleware } from '../middlewares/authMiddleware';
+import { validate } from '../middlewares/validateRequest';
+import { loginSchema, registerSchema, updateUserSchema } from '../../../application/dtos/AuthSchemas';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -17,11 +19,9 @@ UserRepository.initTable().catch(console.error);
 
 // --- PUBLIC ROUTES ---
 
-router.post('/login', async (req: Request, res: Response) => {
+// Login
+router.post('/login', validate(loginSchema), async (req: Request, res: Response) => {
     const { username, password } = req.body;
-    if (!username || !password) {
-        return res.status(400).json({ error: 'Username e password são obrigatórios' });
-    }
     try {
         const user = await UserRepository.getByUsername(username);
         if (!user) {
@@ -54,11 +54,9 @@ router.get('/users', async (req: Request, res: Response) => {
     }
 });
 
-router.post('/register', async (req: Request, res: Response) => {
+// Criar usuário (Apenas Admin)
+router.post('/register', validate(registerSchema), async (req: Request, res: Response) => {
     const { nome, username, password } = req.body;
-    if (!username || !password) {
-        return res.status(400).json({ error: 'Username e password são obrigatórios' });
-    }
     try {
         const userExists = await UserRepository.getByUsername(username);
         if (userExists) {
@@ -74,7 +72,8 @@ router.post('/register', async (req: Request, res: Response) => {
     }
 });
 
-router.put('/users/:id', async (req: Request, res: Response) => {
+// Atualizar usuário
+router.put('/users/:id', validate(updateUserSchema), async (req: Request, res: Response) => {
     const id = parseInt(req.params.id, 10);
     const { nome, username, password } = req.body;
     
