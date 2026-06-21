@@ -44,6 +44,10 @@ router.get('/qrcode/:token', async (req: Request, res: Response) => {
         
         const finalData = await EvolutionService.getQrCodeOrStatus(instancia, phone);
 
+        if (finalData.connected || finalData.status === \'CONNECTED\' || finalData.status === \'OPEN\') {
+            await ConfigRepository.updateConnectionStatusByToken(token, \'CONNECTED\');
+        }
+
         res.json({ 
             connected: false, 
             ...finalData, 
