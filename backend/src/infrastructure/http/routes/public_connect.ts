@@ -59,7 +59,7 @@ router.get('/qrcode/:token', async (req: Request, res: Response) => {
 
         res.json({ 
             connected: false, 
-            status: 'CONNECTING',
+            status: (base64 || pairingCode) ? 'QR_READY' : 'CONNECTING',
             base64,
             pairingCode,
             instanceName: instancia,
