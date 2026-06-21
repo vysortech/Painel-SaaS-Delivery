@@ -36,7 +36,13 @@ router.get('/qrcode/:token', async (req: Request, res: Response) => {
         const phone = req.query.phone as string | undefined;
         const finalData = await EvolutionService.getQrCodeOrStatus(instancia, phone);
 
-        res.json({ connected: false, ...finalData, instanceName: instancia });
+        res.json({ 
+            connected: false, 
+            ...finalData, 
+            instanceName: instancia,
+            nome_empresa: tenant.nome_empresa,
+            telefone_admin: tenant.telefone_admin
+        });
     } catch (err: any) {
         console.error("Public Connect Error:", err.message);
         res.status(500).json({ error: 'Erro ao buscar QR Code' });

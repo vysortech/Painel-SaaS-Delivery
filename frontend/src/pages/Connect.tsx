@@ -10,6 +10,8 @@ export default function Connect() {
     const [status, setStatus] = useState<'loading' | 'qr' | 'connected' | 'error' | 'pairing'>('loading');
     const [phone, setPhone] = useState('');
     const [requestingPairing, setRequestingPairing] = useState(false);
+    const [nomeEmpresa, setNomeEmpresa] = useState('');
+    const [instanceName, setInstanceName] = useState('');
 
     useEffect(() => {
         let isMounted = true;
@@ -38,6 +40,13 @@ export default function Connect() {
                     setQrCode(data.base64);
                 } else {
                     setStatus('error');
+                }
+                
+                if (data.nome_empresa) setNomeEmpresa(data.nome_empresa);
+                if (data.instanceName) setInstanceName(data.instanceName);
+                if (data.telefone_admin && !phone) {
+                    const onlyNumbers = data.telefone_admin.split(',')[0].replace(/\D/g, '');
+                    if (onlyNumbers) setPhone(onlyNumbers);
                 }
             } catch {
                 if (isMounted) setStatus('error');
@@ -85,7 +94,13 @@ export default function Connect() {
         <div className="min-h-screen bg-[#09090b] flex items-center justify-center p-4">
             <div className="max-w-md w-full bg-[#18181b] border border-[#27272a] rounded-2xl p-8 shadow-2xl flex flex-col items-center">
                 
-                <h1 className="text-xl font-bold text-white mb-6">Conectar WhatsApp</h1>
+                <h1 className="text-xl font-bold text-white mb-2">Conectar WhatsApp</h1>
+                {nomeEmpresa && (
+                    <div className="flex flex-col items-center mb-6 text-sm">
+                        <span className="text-gray-400">Cliente: <strong className="text-white">{nomeEmpresa}</strong></span>
+                        <span className="text-gray-500 text-xs">Instância: {instanceName || instancia}</span>
+                    </div>
+                )}
 
                 <div className="bg-white p-4 rounded-xl w-full flex flex-col items-center justify-center min-h-[300px] shadow-inner relative">
                     {status === 'loading' && (
