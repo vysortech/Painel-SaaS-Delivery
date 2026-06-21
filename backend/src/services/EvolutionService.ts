@@ -85,11 +85,15 @@ export class EvolutionService {
             }, { headers: { 'apikey': key } }).catch(() => {});
 
             // 3. Tentar conectar (Evo Go)
-            await axios.post(`${url}/instance/connect`, {}, { 
-                headers: { 'apikey': instancia } 
-            }).catch(() => {}); // ignore se já estiver conectando
-            
-            if (phone) {
+            let isEvoGo = false;
+            try {
+                await axios.post(`${url}/instance/connect`, {}, { headers: { 'apikey': instancia } });
+                isEvoGo = true;
+                // Aguarda 2 segundos para o Evo Go gerar o QR Code
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            } catch(e) {}
+
+            if (phone && isEvoGo) {
                 // 4. Pedir Pairing Code (Evo Go)
                 try {
                     const pairRes = await axios.post(`${url}/instance/pair`, { phone }, { 
@@ -99,14 +103,15 @@ export class EvolutionService {
                         return { pairingCode: pairRes.data?.data?.PairingCode || pairRes.data?.PairingCode };
                     }
                 } catch(e) {}
-            } else {
+            } else if (isEvoGo) {
                 // 5. Pegar QR Code (Evo Go)
                 try {
                     const qrRes = await axios.get(`${url}/instance/qr`, { 
                         headers: { 'apikey': instancia } 
                     });
-                    if (qrRes.data?.data?.Qrcode || qrRes.data?.Qrcode) {
-                        return { base64: qrRes.data?.data?.Qrcode || qrRes.data?.Qrcode };
+                    const qrBase = qrRes.data?.data?.Qrcode || qrRes.data?.Qrcode;
+                    if (qrBase) {
+                        return { base64: qrBase };
                     }
                 } catch(e) {}
             }
@@ -115,12 +120,23 @@ export class EvolutionService {
             let urlStr = `${url}/instance/connect/${instancia}`;
             if (phone) urlStr += `?phone=${phone}`;
             
-            connectResponse = await axios.get(urlStr, {
-                headers: { 'apikey': key }
-            });
+            try {
+                connectResponse = await axios.get(urlStr, {
+                    headers: { 'apikey': key }
+                });
+            } catch(finalErr: any) {
+                console.error("ERRO FINAL na conexao. Provavelmente a instancia nao foi criada ou rota invalida:", finalErr.response?.data || finalErr.message);
+                require('fs').appendFileSync('/tmp/evo_error.log', JSON.stringify({
+                    message: "ERRO FINAL na conexao",
+                    urlStr,
+                    error: finalErr.response?.data || finalErr.message
+                }) + '\n');
+                // Return empty object to let frontend show generic QR code loading or waiting
+                return { base64: null, error: "Falha ao conectar na instancia. Verifique os logs." };
+            }
         }
 
-        let finalData = connectResponse.data;
+        let finalData = connectResponse?.data || {};
         if (!finalData.base64) {
             const qr = finalData.qrcode || finalData.Qrcode || finalData.data?.qrcode || finalData.data?.Qrcode || finalData.data?.base64;
             if (qr) finalData.base64 = qr;
