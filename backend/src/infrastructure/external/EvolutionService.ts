@@ -70,8 +70,10 @@ export class EvolutionService {
 
     public static async connectInstance(instancia: string, phone?: string): Promise<any> {
         const { url, key } = await this.getCredentials();
-        const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
-        const WEBHOOK_URL = `${backendUrl}/api/whatsapp/webhooks`;
+        
+        let defaultWebhook = 'https://n8n1.vysortech.app.br/webhook/9b37f408-861d-4cb8-beb3-1f66ef0233d7/:instancia';
+        let webhookTemplate = process.env.WEBHOOK_URL || defaultWebhook;
+        const WEBHOOK_URL = webhookTemplate.replace(':instancia', instancia);
         
         let connectResponse;
 
