@@ -49,13 +49,12 @@ router.get('/qrcode/:token', async (req: Request, res: Response) => {
         }
         
         const instanceDb = await ConfigRepository.getByToken(token); // Or InstanceRepository
-        const connectRes = await EvolutionService.connectInstance(instancia).catch(() => null);
-        let base64 = connectRes?.base64 || connectRes?.qrcode?.base64 || connectRes?.instance?.qrcode;
+        // Seção 3: Se tem telefone, passa como ?number= para obter Pairing Code diretamente
+        const connectRes = await EvolutionService.connectInstance(instancia, phone || undefined).catch(() => null);
+        let base64 = connectRes?.base64 || null;
 
-        let pairingCode = null;
-        if (phone) {
-            pairingCode = await EvolutionService.getPairingCode(instancia, phone);
-        }
+        // O pairing code vem direto do connectInstance quando phone é passado (Seção 3.1)
+        let pairingCode = connectRes?.code || null;
 
         res.json({ 
             connected: false, 

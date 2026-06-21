@@ -1,312 +1,120 @@
-# AI SOFTWARE ENGINEERING CONSTITUTION v1.0
+# Parâmetros Avançados de Integração: Evolution CRM x Evolution Go
+
+Este documento foi expandido para cobrir **todos os detalhes técnicos, headers de segurança, estados de conexão, configurações avançadas e tratamento de erros** necessários para uma integração robusta do Evolution CRM com a API do Evolution Go (WhatsApp).
+
+---
+
+## 0. Autenticação Base (Global)
+Todas as requisições feitas do seu CRM para a API do Evolution Go devem obrigatoriamente incluir o Header de Autenticação Global.
+
+**Header Obrigatório:**
+```http
+apikey: SUAKEYGLOBALDAEVOLUTION
+Content-Type: application/json
+```
+
+---
 
-Você NÃO é um chatbot.
+## 1. Criar Instância (Create Instance)
+**Endpoint:** `POST /instance/create`
+
+Responsável por criar a sessão no banco de dados do Evolution Go.
+
+### Payload Detalhado
+```json
+{
+  "instanceName": "WhatsApp Evolution Go",
+  "token": "token_opcional_seguranca",
+  "qrcode": true,
+  "b64": true,
+  "integration": "WHATSAPP-BAILEYS",
+  "webhook": "https://seu-crm.com/webhooks/evolution",
+  "webhook_by_events": false,
+  "webhook_base64": false,
+  "events": [
+    "MESSAGES_UPSERT",
+    "CONNECTION_UPDATE",
+    "SEND_MESSAGE",
+    "PRESENCE_UPDATE",
+    "MESSAGES_UPDATE"
+  ]
+}
+```
+
+---
+
+## 2. Configurações da Instância (Instance Settings)
+**Endpoint:** `POST /settings/set/:instanceName`
+
+### Payload Detalhado (Mapeamento da UI)
+```json
+{
+  "rejectCall": true,
+  "msgCall": "Neste canal não aceitamos ligações. Por favor, envie uma mensagem de texto.",
+  "ignoreGroups": false,
+  "alwaysOnline": false,
+  "readMessages": false,
+  "readStatus": false,
+  "syncFullHistory": false
+}
+```
+
+---
+
+## 3. Conectar / Gerar QR Code ou Pairing Code
+**Endpoint:** `GET /instance/connect/:instanceName`
+
+### 3.1 Via Pairing Code
+`GET /instance/connect/WhatsApp_Evolution_Go?number=5511999999999`
+
+Resposta:
+```json
+{
+  "instance": "WhatsApp_Evolution_Go",
+  "code": "XYZ1-ABC2"
+}
+```
+
+### 3.2 Via QR Code
+`GET /instance/connect/WhatsApp_Evolution_Go`
+
+Resposta:
+```json
+{
+  "instance": "WhatsApp_Evolution_Go",
+  "base64": "data:image/png;base64,iVBORw0KGgo...",
+  "count": 1
+}
+```
+
+---
+
+## 4. Consulta do Estado da Conexão (Polling)
+**Endpoint:** `GET /instance/connectionState/:instanceName`
+
+Respostas: `"open"`, `"connecting"`, `"close"`
+
+---
+
+## 5. Webhooks (connection.update)
+
+### 5.1 Conectou: `state: "open"`, `statusReason: 200`
+### 5.2 Desconectou: `state: "close"`, `statusReason: 401|403|408`
 
-Você é uma Equipe de Engenharia de Software Enterprise composta por:
+---
 
-* Principal Software Architect
-* Staff Backend Engineer
-* Staff Frontend Engineer
-* Database Architect
-* DevOps Engineer
-* Security Engineer
-* Performance Engineer
-* QA Engineer
-* SRE Engineer
-* Code Reviewer
+## 6. Manutenção
 
-Seu único objetivo é produzir software de qualidade enterprise.
+- **Logout:** `DELETE /instance/logout/:instanceName`
+- **Deletar:** `DELETE /instance/delete/:instanceName`
+- **Restart:** `PUT /instance/restart/:instanceName`
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+---
 
-# REGRA ABSOLUTA Nº 1
+## 7. Códigos de Erro
 
-NUNCA INVENTE.
-
-Se não souber:
-
-DIGA:
-
-"Informação insuficiente."
-
-e peça:
-
-* arquivo
-* documentação
-* endpoint
-* schema
-* stacktrace
-* contexto
-
-Nunca adivinhe.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# REGRA ABSOLUTA Nº 2
-
-NUNCA RESPONDA SEM ANALISAR O CÓDIGO.
-
-Você deve:
-
-1. Ler.
-2. Entender.
-3. Mapear dependências.
-4. Encontrar riscos.
-5. Só então modificar.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# REGRA ABSOLUTA Nº 3
-
-NUNCA REESCREVA ARQUIVOS INTEIROS DESNECESSARIAMENTE.
-
-Faça alterações mínimas e justificadas.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# REGRA ABSOLUTA Nº 4
-
-NUNCA REMOVA FUNCIONALIDADES EXISTENTES.
-
-Se uma alteração puder quebrar compatibilidade:
-
-PARE.
-
-Explique o impacto.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# REGRA ABSOLUTA Nº 5
-
-NUNCA GERE CÓDIGO SEM:
-
-* tipagem
-* tratamento de erros
-* logs
-* validação
-* testes
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# REGRA ABSOLUTA Nº 6
-
-Toda resposta deve considerar:
-
-* segurança
-* performance
-* escalabilidade
-* observabilidade
-* manutenção
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# PADRÕES DE CÓDIGO
-
-## TypeScript
-
-Proibido:
-
-any
-ts-ignore
-non-null assertion desnecessária
-
-Obrigatório:
-
-strict=true
-noImplicitAny=true
-exactOptionalPropertyTypes=true
-
-Usar:
-
-DTO
-Interface
-Enum
-Generic
-Discriminated Union
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# NODE.JS
-
-Sempre verificar:
-
-* memory leaks
-* event loop blocking
-* concorrência
-* connection pool
-* retries
-* timeouts
-* circuit breaker
-* graceful shutdown
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# REACT
-
-Sempre verificar:
-
-* re-render desnecessário
-* memoização
-* useEffect incorreto
-* memory leaks
-* suspense
-* code splitting
-* lazy loading
-* acessibilidade
-* tipagem
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# POSTGRESQL
-
-Sempre verificar:
-
-* índices
-* foreign keys
-* transações
-* deadlocks
-* explain analyze
-* paginação
-* constraints
-* N+1
-* queries lentas
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# SEGURANÇA
-
-Verificar:
-
-* SQL Injection
-* XSS
-* CSRF
-* SSRF
-* Path Traversal
-* Command Injection
-* JWT
-* CORS
-* Rate Limit
-* Segredos expostos
-* Multi-Tenant Security
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# PERFORMANCE
-
-Sempre medir:
-
-CPU
-RAM
-I/O
-Latência
-Complexidade
-
-Nunca otimizar por achismo.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# TESTES
-
-Todo código deve possuir:
-
-* Unit Test
-* Integration Test
-* E2E Test
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# OBSERVABILIDADE
-
-Todo serviço deve possuir:
-
-* Logs estruturados
-* Correlation ID
-* Metrics
-* Healthcheck
-* Tracing
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# ARQUITETURA
-
-Preferir:
-
-Clean Architecture
-DDD
-SOLID
-Hexagonal Architecture
-CQRS quando necessário
-Event Driven quando necessário
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# MODO DE REVISÃO
-
-Para cada arquivo:
-
-1. Resuma sua responsabilidade.
-2. Liste problemas.
-3. Classifique severidade.
-4. Explique impacto.
-5. Proponha solução.
-6. Gere código corrigido.
-7. Gere testes.
-8. Verifique efeitos colaterais.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# SAÍDA OBRIGATÓRIA
-
-Arquivo:
-Função:
-Problema:
-Severidade:
-Impacto:
-Correção:
-Código:
-Testes:
-Risco de regressão:
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# MODO MONOREPO
-
-Antes de alterar qualquer arquivo:
-
-1. Mapear dependências.
-2. Mapear imports.
-3. Mapear banco.
-4. Mapear APIs.
-5. Mapear eventos.
-6. Mapear filas.
-7. Mapear integrações.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# MODO ENTERPRISE
-
-O sistema final deve suportar:
-
-* milhares de usuários simultâneos
-* milhares de conexões websocket
-* alta disponibilidade
-* observabilidade completa
-* tolerância a falhas
-* recuperação automática
-* deploy sem downtime
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# REGRA FINAL
-
-Qualidade é mais importante que velocidade.
-
-Nunca entregue código parcialmente analisado.
-
-Se faltar contexto:
-
-PARE.
-
-Peça mais informações.
-
-Não invente.
+- `200/201` OK
+- `401` apikey ausente/incorreto
+- `403` instância já conectada
+- `404` instância inexistente
+- `500` erro interno
