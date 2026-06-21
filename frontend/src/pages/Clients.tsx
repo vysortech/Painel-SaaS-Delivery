@@ -355,27 +355,6 @@ export default function Clients() {
                          </div>
                      </div>
 
-                     <div>
-                         <label className="block text-sm font-medium text-gray-300 mb-1">Número do WhatsApp Principal <span className="text-red-500">*</span></label>
-                         <div className="flex">
-                             <span className="bg-[#131316] border border-gray-800 border-r-0 rounded-l-lg p-3 text-gray-500 font-medium text-sm flex items-center justify-center min-w-[3rem]">BR +55</span>
-                             <input type="text" 
-                                className="w-full bg-[#18181b] border border-gray-700/50 rounded-r-lg p-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all placeholder-gray-600"
-                                placeholder="DDD + Número (Opcional, apenas para admins)"
-                                value={telefones[0] ? telefones[0].replace(/^55/, '') : ''} 
-                                onChange={e => {
-                                   const val = e.target.value.replace(/\D/g, '');
-                                   const newTels = [...telefones];
-                                   if (val) {
-                                       newTels[0] = '55' + val;
-                                   } else {
-                                       newTels.shift();
-                                   }
-                                   setTelefones(newTels);
-                                }}
-                             />
-                         </div>
-                     </div>
 
                      <div className="pt-4 border-t border-gray-800/50">
                          <h4 className="text-sm font-bold text-gray-200 mb-4">Configurações da Instância</h4>
@@ -406,11 +385,6 @@ export default function Clients() {
                                 <span className="group-hover:text-emerald-400 transition-colors">Ignorar Status</span>
                             </label>
                          </div>
-                     </div>
-                     <div className="pt-4 flex justify-end">
-                        <button type="submit" className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(16,185,129,0.2)] transition-all">
-                           <Save className="w-4 h-4" /> Gravar Alterações
-                        </button>
                      </div>
                  </div>
              </div>
@@ -454,11 +428,6 @@ export default function Clients() {
                             placeholder="Descreva aqui o contexto exclusivo desta loja..."
                             value={formData.contexto_loja || ''} onChange={e => setFormData({...formData, contexto_loja: e.target.value})}
                         />
-                    </div>
-                    <div className="pt-4 flex justify-end">
-                       <button type="submit" className="bg-purple-600 hover:bg-purple-500 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(168,85,247,0.2)] transition-all">
-                          <Save className="w-4 h-4" /> Gravar Alterações
-                       </button>
                     </div>
                  </div>
              </div>
@@ -557,12 +526,9 @@ export default function Clients() {
                        </div>
                     </div>
                     
-                    <div className="flex justify-between items-center pt-6">
+                    <div className="flex justify-end pt-6">
                        <button type="button" onClick={handleRenovarPagamento} className="bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/30 px-4 py-2.5 rounded-lg font-bold flex items-center gap-2 text-sm transition-colors">
                           <CreditCard className="w-4 h-4"/> Renovar +30 Dias Automático
-                       </button>
-                       <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(37,99,235,0.2)] transition-all">
-                          <Save className="w-4 h-4" /> Gravar Alterações
                        </button>
                     </div>
                  </div>

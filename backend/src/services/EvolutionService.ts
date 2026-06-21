@@ -102,7 +102,7 @@ export class EvolutionService {
                 }
             }
 
-            let result: any = { base64: null, pairingCode: null };
+            let result: any = { base64: null, pairingCode: null, status: evoGoState.toUpperCase() };
             
             // Try fetching the QR Code
             try {

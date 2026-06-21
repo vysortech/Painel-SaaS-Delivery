@@ -25,10 +25,12 @@ export default function Connect() {
 
                 if (!isMounted) return;
 
-                if (data.connected || data.status === 'CONNECTED') {
+                if (data.connected || data.status === 'CONNECTED' || data.status === 'OPEN') {
                     setStatus('connected');
                     setQrCode(null);
                     setPairingCode(null);
+                } else if (data.status === 'CONNECTING') {
+                    setStatus('loading');
                 } else if (data.base64 || data.pairingCode || data.code) {
                     setStatus('qr_and_pairing');
                     if (data.base64) setQrCode(data.base64);
@@ -70,8 +72,10 @@ export default function Connect() {
         try {
             const res = await api.get(`/public/whatsapp/qrcode/${instancia}?phone=${phone.replace(/\D/g, '')}`);
             const data = res.data;
-            if (data.connected || data.status === 'CONNECTED') {
+            if (data.connected || data.status === 'CONNECTED' || data.status === 'OPEN') {
                 setStatus('connected');
+            } else if (data.status === 'CONNECTING') {
+                setStatus('loading');
             } else if (data.base64 || data.pairingCode || data.code) {
                 setStatus('qr_and_pairing');
                 if (data.base64) setQrCode(data.base64);
@@ -123,9 +127,10 @@ export default function Connect() {
                     )}
 
                     {status === 'connected' && (
-                        <div className="flex flex-col items-center text-[#10b981]">
-                            <CheckCircle2 className="w-16 h-16 mb-2" />
-                            <p className="font-bold text-lg">Conectado com Sucesso</p>
+                        <div className="flex flex-col items-center text-[#10b981] text-center px-4">
+                            <CheckCircle2 className="w-20 h-20 mb-4 animate-bounce" />
+                            <h2 className="font-black text-2xl mb-2">Conectado com sucesso!</h2>
+                            <p className="text-gray-300 font-medium">Parabéns, você já pode usar o SaaS Delivery!</p>
                         </div>
                     )}
 
@@ -151,28 +156,6 @@ export default function Connect() {
                     <div className="mt-6 flex flex-col items-center text-center">
                         <p className="text-[#a1a1aa] text-sm">Seu WhatsApp já está conectado e operante.</p>
                         <p className="text-[#a1a1aa] text-sm mt-1">Pode fechar esta página com segurança.</p>
-                    </div>
-                )}
-
-                {(status === 'error' || (status === 'qr_and_pairing' && !pairingCode)) && (
-                    <div className="mt-8 w-full border-t border-[#27272a] pt-6">
-                        <p className="text-xs text-[#71717a] mb-3 text-center uppercase tracking-wider font-semibold">Conectar pelo Celular (Pairing Code)</p>
-                        <div className="flex gap-2">
-                            <input 
-                                type="text" 
-                                placeholder="DDI + DDD + Número (Ex: 5511...)"
-                                value={phone}
-                                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                                className="flex-1 bg-[#27272a] border border-[#3f3f46] rounded-lg p-2.5 text-white text-sm outline-none focus:border-[#0ea5e9] transition-colors"
-                            />
-                            <button 
-                                onClick={handleRequestPairing}
-                                disabled={requestingPairing || phone.length < 10}
-                                className="bg-[#27272a] border border-[#3f3f46] hover:bg-[#3f3f46] disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-lg font-medium text-sm transition-colors"
-                            >
-                                Gerar Código
-                            </button>
-                        </div>
                     </div>
                 )}
             </div>
