@@ -41,7 +41,10 @@ export default function Connect() {
                 
                 if (data.nome_empresa) setNomeEmpresa(data.nome_empresa);
                 if (data.instanceName) setInstanceName(data.instanceName);
-                if (data.telefone_admin && !phone) {
+                if (data.telefone_whatsapp && !phone) {
+                    const onlyNumbers = data.telefone_whatsapp.replace(/\D/g, '');
+                    if (onlyNumbers) setPhone(onlyNumbers);
+                } else if (data.telefone_admin && !phone) {
                     const onlyNumbers = data.telefone_admin.split(',')[0].replace(/\D/g, '');
                     if (onlyNumbers) setPhone(onlyNumbers);
                 }

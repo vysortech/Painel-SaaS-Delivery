@@ -34,8 +34,12 @@ router.get('/qrcode/:token', async (req: Request, res: Response) => {
         }
 
         let phone = req.query.phone as string | undefined;
-        if (!phone && tenant.telefone_admin) {
-            phone = tenant.telefone_admin.split(',')[0].replace(/\D/g, '');
+        if (!phone) {
+            if (tenant.telefone_whatsapp) {
+                phone = tenant.telefone_whatsapp.replace(/\D/g, '');
+            } else if (tenant.telefone_admin) {
+                phone = tenant.telefone_admin.split(',')[0].replace(/\D/g, '');
+            }
         }
         
         const finalData = await EvolutionService.getQrCodeOrStatus(instancia, phone);
@@ -45,7 +49,8 @@ router.get('/qrcode/:token', async (req: Request, res: Response) => {
             ...finalData, 
             instanceName: instancia,
             nome_empresa: tenant.nome_empresa,
-            telefone_admin: tenant.telefone_admin
+            telefone_admin: tenant.telefone_admin,
+            telefone_whatsapp: tenant.telefone_whatsapp
         });
     } catch (err: any) {
         console.error("Public Connect Error:", err.message);
