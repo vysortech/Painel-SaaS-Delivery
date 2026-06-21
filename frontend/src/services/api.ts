@@ -5,7 +5,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('saas_token');
+    const token = localStorage.getItem('saas_token') || sessionStorage.getItem('saas_token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
@@ -17,7 +17,9 @@ api.interceptors.response.use(
     (error) => {
         if (error.response?.status === 401) {
             localStorage.removeItem('saas_token');
+            sessionStorage.removeItem('saas_token');
             localStorage.removeItem('saas_user');
+            sessionStorage.removeItem('saas_user');
             window.location.href = '/login';
         }
         return Promise.reject(error);
