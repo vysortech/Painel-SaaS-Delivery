@@ -85,7 +85,7 @@ app.use('/api/alerts', alertsRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/settings', settingsRoutes);
-app.use('/api/public/connect', publicConnectRoutes);
+app.use('/api/public/whatsapp', publicConnectRoutes);
 app.use('/api/whatsapp/webhooks', webhookRoutes);
 
 // Global Error Handler
