@@ -18,6 +18,12 @@ export const ConnectionScreen: React.FC<ConnectionScreenProps> = ({ tenantId, in
         // Inicia o processo de conexão assim que a tela abre
         api.post(`/whatsapp/instances/${instanceName}/connect`, {}, {
             params: { tenant_id: tenantId }
+        }).then(res => {
+            // Se o backend já retornou o QR Code direto da Evolution Go, mostra imediatamente
+            if (res.data?.base64) {
+                setQrCode(res.data.base64);
+                setStatus('CONNECTING');
+            }
         }).catch(err => {
             console.error(err);
             setStatus('ERROR');

@@ -24,21 +24,34 @@ router.get('/instances', async (req: Request, res: Response) => {
 router.post('/instances/:instanceName/connect', async (req: Request, res: Response) => {
     try {
         const { instanceName } = req.params;
+        const tenantId = req.query.tenant_id as string || 'default';
         let instance = await InstanceRepository.getByName(instanceName);
         
         if (!instance) {
-            // Auto-create local e remoto se não existir
-            // Pega tenantId via query só pra teste ou auth
-            const tenantId = req.query.tenant_id as string || 'default';
             instance = await InstanceRepository.create({ tenant_id: tenantId, instance_name: instanceName, instance_token: instanceName, status: 'PENDING' });
             await EvolutionService.createInstance(instanceName);
         }
 
-        await EvolutionService.connectInstance(instanceName);
+        const connectResult = await EvolutionService.connectInstance(instanceName);
         
-        // Em vez de segurar a requisição, retornamos OK. 
-        // O QRCode virá pelo WebSocket via fila (BullMQ).
-        res.json({ success: true, message: 'Processo de conexão iniciado. Escute o websocket para o QRCode.' });
+        // Se a Evolution Go retornou o QR Code direto na resposta, emite via Socket.io imediatamente
+        const qrBase64 = connectResult?.base64 || null;
+        const pairingCode = connectResult?.pairingCode || connectResult?.code || null;
+
+        if (qrBase64) {
+            const { SocketServer } = await import('../../websocket/SocketServer');
+            SocketServer.emitToTenant(tenantId, 'qrcode.updated', {
+                instance: instanceName,
+                base64: qrBase64
+            });
+        }
+
+        res.json({ 
+            success: true, 
+            base64: qrBase64,
+            pairingCode,
+            message: qrBase64 ? 'QR Code gerado com sucesso.' : 'Processo de conexão iniciado. Aguarde o QR Code via websocket.' 
+        });
     } catch (err: any) {
         logger.error({ err }, 'Erro ao conectar instância');
         res.status(500).json({ error: 'Erro ao iniciar conexão' });

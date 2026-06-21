@@ -45,6 +45,7 @@ export class EvolutionService {
                 webhook: WEBHOOK_URL,
                 webhook_by_events: false,
                 events: [
+                    "QRCODE_UPDATED",
                     "MESSAGES_UPSERT",
                     "CONNECTION_UPDATE",
                     "SEND_MESSAGE"
