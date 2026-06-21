@@ -29,6 +29,7 @@ initDatabase().catch(err => {
 });
 
 const app = express();
+app.set('trust proxy', 1); // Necessário para rate limit via Traefik/Cloudflare
 const PORT = process.env.PORT || 4000;
 
 // Security Middleware
