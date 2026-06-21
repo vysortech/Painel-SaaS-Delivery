@@ -6,10 +6,13 @@ import dotenv from 'dotenv';
 import authRoutes from './infrastructure/http/routes/auth';
 import configRoutes from './infrastructure/http/routes/config';
 import alertsRoutes from './infrastructure/http/routes/alerts';
-import evolutionRoutes from './infrastructure/http/routes/evolution';
+import whatsappRoutes from './infrastructure/http/routes/whatsapp';
 import analyticsRoutes from './infrastructure/http/routes/analytics';
 import settingsRoutes from './infrastructure/http/routes/settings';
 import publicConnectRoutes from './infrastructure/http/routes/public_connect';
+import webhookRoutes from './infrastructure/http/routes/webhook';
+import { SocketServer } from './infrastructure/websocket/SocketServer';
+import './application/workers/EvolutionWorker';
 import { startBillingCron } from './infrastructure/cron/billing';
 import { logger } from './shared/logger';
 import { errorHandler } from './infrastructure/http/middlewares/errorHandler';
@@ -62,10 +65,11 @@ app.get('/api/health', async (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/config', configRoutes);
 app.use('/api/alerts', alertsRoutes);
-app.use('/api/evolution', evolutionRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/public/connect', publicConnectRoutes);
+app.use('/api/whatsapp/webhooks', webhookRoutes);
 
 // Global Error Handler
 app.use(errorHandler);
@@ -76,6 +80,9 @@ startBillingCron();
 const server = app.listen(PORT, () => {
     logger.info(`🚀 Backend SaaS Delivery rodando na porta ${PORT}`);
 });
+
+// Inicializar Servidor de WebSocket (Socket.IO)
+SocketServer.init(server);
 
 // --- Graceful Shutdown ---
 function gracefulShutdown(signal: string) {
@@ -113,8 +120,4 @@ if (fs.existsSync(frontendPath)) {
 }
 
 // Iniciar tarefas em segundo plano (Cron Jobs)
-startBillingCron();
-
-app.listen(PORT, () => {
-    console.log(`🚀 Backend SaaS V3 rodando na porta ${PORT}`);
-});
+// startBillingCron(); // Já inicializado na linha 74

@@ -1,8 +1,25 @@
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
 import { logger } from '../../shared/logger';
+import { ConfigRepository } from './repositories/ConfigRepository';
+import { GlobalSettingsRepository } from './repositories/GlobalSettingsRepository';
+import { InstanceRepository } from './repositories/InstanceRepository';
+import { WebhookLogsRepository } from './repositories/WebhookLogsRepository';
 
 dotenv.config();
+
+export async function initDatabase() {
+    try {
+        await ConfigRepository.initTable();
+        await GlobalSettingsRepository.initTable();
+        await InstanceRepository.initTables();
+        await WebhookLogsRepository.initTables();
+        logger.info('Tabelas do banco de dados inicializadas ou verificadas com sucesso.');
+    } catch (error) {
+        logger.fatal({ error }, 'Erro ao inicializar tabelas do banco de dados');
+        process.exit(1);
+    }
+}
 
 if (!process.env.DB_PASSWORD) {
     logger.fatal('FATAL: DB_PASSWORD não definido nas variáveis de ambiente!');

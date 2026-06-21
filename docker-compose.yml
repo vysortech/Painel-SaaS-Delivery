@@ -1,34 +1,15 @@
 version: '3.8'
 
 services:
-  saas-panel:
-    image: ghcr.io/vysortech/painel-saas-delivery:latest
-    environment:
-      - PORT=4000
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=postgres
-      - DB_PASSWORD=e2zaFkFxxIfX04QxP55LEvX2ZNW6XKFb
-      - DB_NAME=saas_delivery
-      - JWT_SECRET=super_secret_saas_key
-      - EVOLUTION_API_URL=http://116.203.152.114:8080
-      - EVOLUTION_API_KEY=X8G9W2M4V5N7B3L1K6J0H9P2Y3T5C8F1
-    networks:
-      - minha_rede
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: any
-      labels:
-        - "traefik.enable=true"
-        - "traefik.docker.network=minha_rede"
-        - "traefik.http.routers.saaspanel.rule=Host(`food.vysortech.app.br`)"
-        - "traefik.http.routers.saaspanel.entrypoints=websecure"
-        - "traefik.http.routers.saaspanel.tls.certresolver=letsencryptresolver"
-        - "traefik.http.routers.saaspanel.service=saaspanel"
-        - "traefik.http.services.saaspanel.loadbalancer.server.port=4000"
+  redis:
+    image: redis:7-alpine
+    container_name: saas_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: always
 
-networks:
-  minha_rede:
-    external: true
-    name: minha_rede
+volumes:
+  redis_data:

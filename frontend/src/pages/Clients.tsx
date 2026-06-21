@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useClients } from '../hooks/useClients';
 import { ClientList } from '../components/clients/ClientList';
 import { ClientForm } from '../components/clients/ClientForm';
+import { ConnectionScreen } from '../components/whatsapp/ConnectionScreen';
 import { Toast, type ToastMessage } from '../components/common/Toast';
 import type { TenantConfig } from '../types';
-import { Save, MessageCircle, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 
 export default function Clients() {
   const { tenants, saveClient, deleteClient, toggleStatus, logoutWhatsapp } = useClients();
@@ -13,7 +14,7 @@ export default function Clients() {
   
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [deleteModal, setDeleteModal] = useState<string | null>(null);
-  const [createdLinkModal, setCreatedLinkModal] = useState<string | null>(null);
+  const [connectingTenant, setConnectingTenant] = useState<TenantConfig | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error') => {
       setToast({ message, type });
@@ -32,9 +33,9 @@ export default function Clients() {
 
   const handleSave = async (payload: any, isEditing: boolean) => {
       try {
-          const token = await saveClient(payload, isEditing);
-          setCreatedLinkModal(`${window.location.origin}/conectar/${token}`);
+          await saveClient(payload, isEditing);
           showToast('Cliente salvo com sucesso!', 'success');
+          setActiveTab('lista');
       } catch (e) {
           showToast('Erro ao salvar cliente.', 'error');
       }
@@ -73,8 +74,7 @@ export default function Clients() {
   };
 
   const handleConnect = (tenant: TenantConfig) => {
-      const token = tenant.connect_token || tenant.instancia;
-      setCreatedLinkModal(`${window.location.origin}/conectar/${token}`);
+      setConnectingTenant(tenant);
   };
 
   return (
@@ -121,48 +121,12 @@ export default function Clients() {
          </div>
       )}
 
-      {/* Link Created Modal */}
-      {createdLinkModal && (
-         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex justify-center items-center p-4 animate-in fade-in zoom-in-95 duration-300">
-            <div className="bg-[#111827] border border-emerald-500/30 w-full max-w-lg rounded-2xl shadow-2xl p-8 text-center relative overflow-hidden">
-               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-indigo-500"></div>
-               <div className="w-20 h-20 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(16,185,129,0.2)]">
-                  <MessageCircle className="w-10 h-10" />
-               </div>
-               <h3 className="text-2xl font-black text-white mb-2 tracking-tight">Cliente Salvo!</h3>
-               <p className="text-gray-400 text-sm mb-8">
-                  O cliente foi configurado e gravado no banco de dados com sucesso. O link de conexão já está ativo e pronto para uso.
-               </p>
-               
-               <div className="bg-[#18181b] border border-gray-700/50 rounded-xl p-4 mb-8 flex items-center justify-between gap-4">
-                  <div className="truncate text-left flex-1">
-                     <span className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Link de Conexão</span>
-                     <span className="text-indigo-400 font-mono text-sm truncate block">{createdLinkModal}</span>
-                  </div>
-                  <button 
-                     onClick={() => {
-                        navigator.clipboard.writeText(createdLinkModal);
-                        showToast('Link copiado com sucesso!', 'success');
-                     }} 
-                     className="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 p-3 rounded-lg transition-colors flex-shrink-0"
-                     title="Copiar Link"
-                  >
-                     <Save className="w-5 h-5" />
-                  </button>
-               </div>
-
-               <button 
-                  onClick={() => {
-                     setCreatedLinkModal(null);
-                     setActiveTab('lista');
-                     setEditingTenant(null);
-                  }} 
-                  className="w-full py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-lg shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all"
-               >
-                  Copiei, voltar para a lista
-               </button>
-            </div>
-         </div>
+      {connectingTenant && (
+          <ConnectionScreen 
+              tenantId={connectingTenant.instancia} // Simulação: usando instancia como ID
+              instanceName={connectingTenant.instancia}
+              onClose={() => setConnectingTenant(null)}
+          />
       )}
 
       {toast && <Toast toast={toast} onClose={() => setToast(null)} />}

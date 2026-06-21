@@ -48,15 +48,17 @@ router.get('/qrcode/:token', async (req: Request, res: Response) => {
             }
         }
         
-        const finalData = await EvolutionService.getQrCodeOrStatus(instancia, phone);
-
-        if (finalData.connected || finalData.status === 'CONNECTED' || finalData.status === 'OPEN') {
-            await ConfigRepository.updateConnectionStatusByToken(token, 'CONNECTED');
+        const instanceDb = await ConfigRepository.getByToken(token); // Or InstanceRepository
+        await EvolutionService.connectInstance(instancia).catch(() => {});
+        let pairingCode = null;
+        if (phone) {
+            pairingCode = await EvolutionService.getPairingCode(instancia, phone);
         }
 
         res.json({ 
             connected: false, 
-            ...finalData, 
+            status: 'CONNECTING',
+            pairingCode,
             instanceName: instancia,
             nome_empresa: tenant.nome_empresa,
             telefone_admin: tenant.telefone_admin,
