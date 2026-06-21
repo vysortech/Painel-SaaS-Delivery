@@ -5,7 +5,7 @@ import { ClientForm } from '../components/clients/ClientForm';
 import { ConnectionScreen } from '../components/whatsapp/ConnectionScreen';
 import { Toast, type ToastMessage } from '../components/common/Toast';
 import type { TenantConfig } from '../types';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Copy, CheckCircle } from 'lucide-react';
 import { useSocket } from '../hooks/useSocket';
 
 export default function Clients() {
@@ -17,6 +17,7 @@ export default function Clients() {
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [deleteModal, setDeleteModal] = useState<string | null>(null);
   const [connectingTenant, setConnectingTenant] = useState<TenantConfig | null>(null);
+  const [linkModalToken, setLinkModalToken] = useState<string | null>(null);
 
   useEffect(() => {
     if (!socket) return;
@@ -49,9 +50,10 @@ export default function Clients() {
 
   const handleSave = async (payload: any, isEditing: boolean) => {
       try {
-          await saveClient(payload, isEditing);
+          const token = await saveClient(payload, isEditing);
           showToast('Cliente salvo com sucesso!', 'success');
           setActiveTab('lista');
+          if (token) setLinkModalToken(token);
       } catch (e) {
           showToast('Erro ao salvar cliente.', 'error');
       }
@@ -143,6 +145,41 @@ export default function Clients() {
               instanceName={connectingTenant.instancia}
               onClose={() => setConnectingTenant(null)}
           />
+      )}
+
+      {/* Link Copy Modal */}
+      {linkModalToken && (
+         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex justify-center items-center p-4">
+            <div className="bg-[#111827] border border-blue-500/30 w-full max-w-md rounded-2xl shadow-2xl p-6 text-center">
+               <div className="w-16 h-16 bg-blue-500/10 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="w-8 h-8" />
+               </div>
+               <h3 className="text-xl font-bold text-white mb-2">Cliente Salvo!</h3>
+               <p className="text-gray-400 text-sm mb-6">
+                  Envie o link abaixo para o cliente conectar o WhatsApp remotamente.
+               </p>
+               
+               <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 flex items-center justify-between mb-6">
+                  <span className="text-gray-300 text-sm truncate mr-2 select-all">
+                     {`${window.location.origin}/conectar/${linkModalToken}`}
+                  </span>
+                  <button 
+                     onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/conectar/${linkModalToken}`);
+                        showToast('Link copiado!', 'success');
+                     }}
+                     className="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-md transition-colors flex-shrink-0"
+                     title="Copiar Link"
+                  >
+                     <Copy className="w-4 h-4" />
+                  </button>
+               </div>
+               
+               <button onClick={() => setLinkModalToken(null)} className="w-full px-6 py-3 rounded-lg bg-gray-800 hover:bg-gray-700 text-white font-bold transition-colors">
+                  Fechar
+               </button>
+            </div>
+         </div>
       )}
 
       {toast && <Toast toast={toast} onClose={() => setToast(null)} />}
