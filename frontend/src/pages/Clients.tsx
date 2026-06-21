@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import useSWR from 'swr';
 import { Plus, Settings, Power, Trash2, Bot, CreditCard, Clock, X, Save, Search, CheckCircle2, AlertCircle, MessageCircle, ArrowLeft } from 'lucide-react';
 import api from '../services/api';
@@ -113,13 +113,6 @@ export default function Clients() {
     setEditingTenant(tenant);
     setActiveTab('cadastro');
   };
-
-  useEffect(() => {
-      if (!editingTenant && formData.nome_empresa) {
-          const generated = formData.nome_empresa.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '');
-          setFormData((prev: any) => ({ ...prev, instancia: generated }));
-      }
-  }, [formData.nome_empresa, editingTenant]);
 
   const handleRenovarPagamento = () => {
      let dias = 30;
@@ -359,13 +352,13 @@ export default function Clients() {
                                      </button>
                                  )}
                              </label>
-                             <input type="hidden" name="instancia" value={formData.instancia || ''} />
-                             <input required disabled={true} type="text" 
-                                className="w-full bg-[#131316] border border-gray-800 rounded-lg p-3 text-gray-400 cursor-not-allowed outline-none"
+                             <input required disabled={!!editingTenant} type="text" 
+                                className="w-full bg-[#131316] border border-gray-800 rounded-lg p-3 text-gray-400 outline-none focus:border-[#0ea5e9]"
                                 value={formData.instancia || ''} 
-                                placeholder="Gerado automaticamente"
+                                onChange={e => setFormData({...formData, instancia: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '')})} 
+                                placeholder="Digite o nome da instância (ex: pizzaria_filial1)"
                              />
-                             <p className="text-xs text-gray-500 mt-2">Este campo é gerado automaticamente a partir do nome da empresa e será usado internamente pela IA.</p>
+                             <p className="text-xs text-gray-500 mt-2">Nome usado internamente pela API (sem espaços ou caracteres especiais).</p>
                          </div>
                      </div>
 
