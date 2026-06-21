@@ -99,7 +99,8 @@ export default function Clients() {
       chave_pix: '', nome_pix: '',
       data_vencimento: getLocalDateString(30), status_assinatura: 'ativo',
       plano_tipo: 'recorrente', contexto_loja: '',
-      nome_atendente: 'Alice', valor_assinatura: 0, dias_carencia: 7
+      nome_atendente: 'Alice', valor_assinatura: 0, dias_carencia: 7,
+      telefone_whatsapp: ''
     });
     setTelefones([]);
     setBotoesTempo(['10', '20', '30']);
@@ -372,6 +373,22 @@ export default function Clients() {
                          </div>
                      </div>
 
+                     <div>
+                         <label className="block text-sm font-medium text-gray-300 mb-1">Número do WhatsApp Principal</label>
+                         <div className="flex">
+                             <span className="bg-[#131316] border border-gray-800 border-r-0 rounded-l-lg p-3 text-gray-500 font-medium text-sm flex items-center justify-center min-w-[3rem]">BR +55</span>
+                             <input type="text" 
+                                className="w-full bg-[#18181b] border border-gray-700/50 rounded-r-lg p-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all placeholder-gray-600"
+                                placeholder="DDD + Número (Que vai conectar no painel)"
+                                value={formData.telefone_whatsapp ? formData.telefone_whatsapp.replace(/^55/, '') : ''}
+                                onChange={e => {
+                                   const val = e.target.value.replace(/\D/g, '');
+                                   setFormData({...formData, telefone_whatsapp: val ? '55' + val : ''});
+                                }}
+                             />
+                         </div>
+                     </div>
+
 
                      <div className="pt-4 border-t border-gray-800/50">
                          <h4 className="text-sm font-bold text-gray-200 mb-4">Configurações da Instância</h4>
@@ -429,6 +446,14 @@ export default function Clients() {
                             value={formData.nome_atendente || ''} onChange={e => setFormData({...formData, nome_atendente: e.target.value})} 
                         />
                     </div>
+
+                    <TagInput 
+                        label="Telefones de Administradores (Que vão conversar com o bot)" 
+                        placeholder="Adicionar número (DDD + Número) e aperte Enter" 
+                        tags={telefones} 
+                        setTags={setTelefones} 
+                        isNumericOnly={true}
+                    />
                     
                     <TagInput 
                         label="Botões de Tempo de Resposta (Minutos)" 

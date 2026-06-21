@@ -11,6 +11,7 @@ export class ConfigRepository {
             ALTER TABLE configuracoes ADD COLUMN IF NOT EXISTS nome_empresa VARCHAR(255);
             ALTER TABLE configuracoes ADD COLUMN IF NOT EXISTS nome_admin VARCHAR(255);
             ALTER TABLE configuracoes ADD COLUMN IF NOT EXISTS telefone_admin VARCHAR(255);
+            ALTER TABLE configuracoes ADD COLUMN IF NOT EXISTS telefone_whatsapp VARCHAR(255);
             ALTER TABLE configuracoes ADD COLUMN IF NOT EXISTS chave_pix VARCHAR(255);
             ALTER TABLE configuracoes ADD COLUMN IF NOT EXISTS nome_pix VARCHAR(255);
             ALTER TABLE configuracoes ADD COLUMN IF NOT EXISTS modelo_ia_cliente VARCHAR(50);
