@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Smartphone, CheckCircle2, Loader2, AlertCircle, Hash } from 'lucide-react';
+import { CheckCircle2, Loader2, AlertCircle, Hash } from 'lucide-react';
 import api from '../services/api';
 
 export default function Connect() {
@@ -81,6 +81,7 @@ export default function Connect() {
         }
     };
 
+    return (
         <div className="min-h-screen bg-[#09090b] flex items-center justify-center p-4">
             <div className="max-w-md w-full bg-[#18181b] border border-[#27272a] rounded-2xl p-8 shadow-2xl flex flex-col items-center">
                 
