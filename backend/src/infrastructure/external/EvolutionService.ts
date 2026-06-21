@@ -40,9 +40,10 @@ export class EvolutionService {
     public static async createInstance(instancia: string): Promise<void> {
         const { url, key } = await this.getCredentials();
         try {
-            let defaultWebhook = 'https://n8n1.vysortech.app.br/webhook/9b37f408-861d-4cb8-beb3-1f66ef0233d7/:instancia';
-            let webhookTemplate = process.env.WEBHOOK_URL || defaultWebhook;
-            const WEBHOOK_URL = webhookTemplate.replace(':instancia', instancia);
+            // O webhook DEVE apontar para o nosso próprio backend que irá processar os eventos
+            // via webhook.ts e EvolutionWorker.ts, onde está a lógica do socket.io e filas.
+            const baseUrl = process.env.BACKEND_URL || process.env.FRONTEND_URL || 'http://localhost:4000';
+            const WEBHOOK_URL = `${baseUrl}/api/whatsapp/webhooks`;
 
             await evolutionApi.post(`${url}/instance/create`, {
                 instanceName: instancia,
