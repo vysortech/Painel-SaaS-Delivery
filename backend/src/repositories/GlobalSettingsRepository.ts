@@ -16,6 +16,8 @@ export class GlobalSettingsRepository {
             ALTER TABLE saas_global_settings ADD COLUMN IF NOT EXISTS custo_token_saida_cliente DECIMAL(10,7) DEFAULT 0.0001;
             ALTER TABLE saas_global_settings ADD COLUMN IF NOT EXISTS custo_token_entrada_admin DECIMAL(10,7) DEFAULT 0.0001;
             ALTER TABLE saas_global_settings ADD COLUMN IF NOT EXISTS custo_token_saida_admin DECIMAL(10,7) DEFAULT 0.0001;
+            ALTER TABLE saas_global_settings ADD COLUMN IF NOT EXISTS evolution_api_url VARCHAR(255);
+            ALTER TABLE saas_global_settings ADD COLUMN IF NOT EXISTS evolution_api_key VARCHAR(255);
         `).catch(console.error);
     }
 
@@ -37,13 +39,15 @@ export class GlobalSettingsRepository {
                     prompt_cliente, prompt_admin, 
                     modelo_ia_cliente, modelo_ia_admin,
                     custo_token_entrada_cliente, custo_token_saida_cliente,
-                    custo_token_entrada_admin, custo_token_saida_admin
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                    custo_token_entrada_admin, custo_token_saida_admin,
+                    evolution_api_url, evolution_api_key
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             `, [
                 settings.prompt_cliente || '', settings.prompt_admin || '', 
                 settings.modelo_ia_cliente || '', settings.modelo_ia_admin || '',
                 settings.custo_token_entrada_cliente || 0, settings.custo_token_saida_cliente || 0,
-                settings.custo_token_entrada_admin || 0, settings.custo_token_saida_admin || 0
+                settings.custo_token_entrada_admin || 0, settings.custo_token_saida_admin || 0,
+                settings.evolution_api_url || '', settings.evolution_api_key || ''
             ]);
         } else {
             await pool.query(`
@@ -51,13 +55,15 @@ export class GlobalSettingsRepository {
                     prompt_cliente=$1, prompt_admin=$2,
                     modelo_ia_cliente=$3, modelo_ia_admin=$4,
                     custo_token_entrada_cliente=$5, custo_token_saida_cliente=$6,
-                    custo_token_entrada_admin=$7, custo_token_saida_admin=$8
-                WHERE id=$9
+                    custo_token_entrada_admin=$7, custo_token_saida_admin=$8,
+                    evolution_api_url=$9, evolution_api_key=$10
+                WHERE id=$11
             `, [
                 settings.prompt_cliente || '', settings.prompt_admin || '', 
                 settings.modelo_ia_cliente || '', settings.modelo_ia_admin || '',
                 settings.custo_token_entrada_cliente || 0, settings.custo_token_saida_cliente || 0,
                 settings.custo_token_entrada_admin || 0, settings.custo_token_saida_admin || 0,
+                settings.evolution_api_url || '', settings.evolution_api_key || '',
                 result.rows[0].id
             ]);
         }

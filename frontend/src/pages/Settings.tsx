@@ -149,6 +149,45 @@ export default function Settings() {
           </div>
         </div>
 
+        {/* Bloco: Configurações de Conexão (Evolution Go) */}
+        <div className="bg-[#111827] border border-gray-800 rounded-xl p-6 shadow-xl space-y-6">
+          <h3 className="text-xl font-semibold text-blue-400 flex items-center gap-2 border-b border-gray-800 pb-2">
+            <Key className="w-5 h-5" /> Configurações de Conexão (Evolution Go)
+          </h3>
+          <p className="text-gray-400 text-sm">Altere a URL Base e a API Key da sua Evolution API Global. O SaaS Panel usará estes dados para gerenciar todas as instâncias.</p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             <div className="space-y-4">
+               <div>
+                 <label className="block text-sm text-gray-400 mb-2">URL Base da API</label>
+                 <div className="relative">
+                   <Database className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                   <input 
+                     type="text" className="w-full bg-gray-900 border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-white focus:border-blue-500 outline-none"
+                     placeholder="Ex: https://go.vysortech.app.br"
+                     value={formData.evolution_api_url || ''} onChange={e => setFormData({...formData, evolution_api_url: e.target.value})}
+                   />
+                 </div>
+               </div>
+             </div>
+
+             <div className="space-y-4">
+               <div>
+                 <label className="block text-sm text-gray-400 mb-2">API Key Global</label>
+                 <div className="relative">
+                   <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                   <input 
+                     type="password" className="w-full bg-gray-900 border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-white focus:border-blue-500 outline-none"
+                     placeholder="Insira a nova API Key Global"
+                     value={formData.evolution_api_key || ''} onChange={e => setFormData({...formData, evolution_api_key: e.target.value})}
+                   />
+                 </div>
+                 <p className="text-xs text-gray-500 mt-2">Deixe em branco se não quiser alterar a chave atual e apenas usar a do .env.</p>
+               </div>
+             </div>
+          </div>
+        </div>
+
       </form>
       {/* Global Toast Notification */}
       {toast && (

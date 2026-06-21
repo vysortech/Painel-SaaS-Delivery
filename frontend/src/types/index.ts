@@ -41,6 +41,8 @@ export interface GlobalSettings {
     custo_token_saida_cliente: number;
     custo_token_entrada_admin: number;
     custo_token_saida_admin: number;
+    evolution_api_url?: string;
+    evolution_api_key?: string;
 }
 
 export interface AuthResponse {

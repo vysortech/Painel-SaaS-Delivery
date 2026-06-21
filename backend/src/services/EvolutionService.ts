@@ -1,19 +1,26 @@
 import axios from 'axios';
-
-const EVO_URL = process.env.EVOLUTION_API_URL || 'http://116.203.152.114:8080';
-const EVO_KEY = process.env.EVOLUTION_API_KEY || 'X8G9W2M4V5N7B3L1K6J0H9P2Y3T5C8F1';
+import { GlobalSettingsRepository } from '../repositories/GlobalSettingsRepository';
 
 export class EvolutionService {
+    private static async getCredentials() {
+        const settings = await GlobalSettingsRepository.get().catch(() => null);
+        return {
+            url: settings?.evolution_api_url || process.env.EVOLUTION_API_URL || 'http://116.203.152.114:8080',
+            key: settings?.evolution_api_key || process.env.EVOLUTION_API_KEY || 'X8G9W2M4V5N7B3L1K6J0H9P2Y3T5C8F1'
+        };
+    }
+
     public static async createInstance(instancia: string): Promise<void> {
+        const { url, key } = await this.getCredentials();
         try {
-            await axios.post(`${EVO_URL}/instance/create`, {
+            await axios.post(`${url}/instance/create`, {
                 instanceName: instancia,
                 name: instancia,
                 integration: "WHATSAPP-BAILEYS",
                 token: instancia,
                 qrcode: true
             }, {
-                headers: { 'apikey': EVO_KEY, 'Content-Type': 'application/json' }
+                headers: { 'apikey': key, 'Content-Type': 'application/json' }
             });
         } catch (e: any) {
             console.error("Evolution Create Error:", e.response?.data || e.message);
@@ -21,8 +28,9 @@ export class EvolutionService {
     }
 
     public static async updateAdvancedSettings(instancia: string, settings: any): Promise<void> {
+        const { url } = await this.getCredentials();
         try {
-            await axios.put(`${EVO_URL}/instance/${instancia}/advanced-settings`, settings, {
+            await axios.put(`${url}/instance/${instancia}/advanced-settings`, settings, {
                 headers: { 'apikey': instancia, 'Content-Type': 'application/json' }
             });
         } catch (e: any) {
@@ -31,6 +39,7 @@ export class EvolutionService {
     }
 
     public static async getQrCodeOrStatus(instancia: string, phone?: string): Promise<any> {
+        const { url, key } = await this.getCredentials();
         let defaultWebhook = 'https://n8n1.vysortech.app.br/webhook/9b37f408-861d-4cb8-beb3-1f66ef0233d7/:instancia';
         let webhookTemplate = process.env.WEBHOOK_URL || defaultWebhook;
         const WEBHOOK_URL = webhookTemplate.replace(':instancia', instancia);
@@ -39,7 +48,7 @@ export class EvolutionService {
         
         try {
             try {
-                await axios.post(`${EVO_URL}/webhook/set/${instancia}`, {
+                await axios.post(`${url}/webhook/set/${instancia}`, {
                     webhook: {
                         enabled: true,
                         url: WEBHOOK_URL,
@@ -47,16 +56,16 @@ export class EvolutionService {
                         base64: false,
                         events: ["MESSAGES_UPSERT", "MESSAGES_UPDATE", "MESSAGES_DELETE", "SEND_MESSAGE", "CONNECTION_UPDATE", "CALL"]
                     }
-                }, { headers: { 'apikey': EVO_KEY } });
+                }, { headers: { 'apikey': key } });
             } catch(e) { 
                 console.log('Aviso: Falha ao setar webhook na rota antiga'); 
             }
 
-            let urlStr = `${EVO_URL}/instance/connect/${instancia}`;
+            let urlStr = `${url}/instance/connect/${instancia}`;
             if (phone) urlStr += `?phone=${phone}`;
             
             connectResponse = await axios.get(urlStr, {
-                headers: { 'apikey': EVO_KEY }
+                headers: { 'apikey': key }
             });
         } catch (err: any) {
             if (err.response?.status === 404 || err.response?.status === 401 || err.response?.status === 403 || err.response?.status === 405) {
@@ -64,7 +73,7 @@ export class EvolutionService {
                 
                 try {
                     // Tentar setar o webhook padrão do Evolution Go
-                    await axios.post(`${EVO_URL}/webhook/set/${instancia}`, {
+                    await axios.post(`${url}/webhook/set/${instancia}`, {
                         webhook: {
                             enabled: true,
                             url: WEBHOOK_URL,
@@ -72,22 +81,22 @@ export class EvolutionService {
                             webhookBase64: false,
                             events: ["MESSAGES_UPSERT", "MESSAGES_UPDATE", "MESSAGES_DELETE", "SEND_MESSAGE", "CONNECTION_UPDATE", "CALL"]
                         }
-                    }, { headers: { 'apikey': EVO_KEY } }).catch(() => {});
+                    }, { headers: { 'apikey': key } }).catch(() => {});
 
                     // 1. Iniciar conexão (POST /instance/connect na Evo Go)
-                    await axios.post(`${EVO_URL}/instance/connect`, {}, { 
+                    await axios.post(`${url}/instance/connect`, {}, { 
                         headers: { 'apikey': instancia } 
                     }).catch(() => {}); // ignore se já estiver conectando
                     
                     if (phone) {
                         // 2. Pedir Pairing Code
-                        const pairRes = await axios.post(`${EVO_URL}/instance/pair`, { phone }, { 
+                        const pairRes = await axios.post(`${url}/instance/pair`, { phone }, { 
                             headers: { 'apikey': instancia } 
                         });
                         return { pairingCode: pairRes.data?.data?.PairingCode || pairRes.data?.PairingCode };
                     } else {
                         // 3. Pegar QR Code
-                        const qrRes = await axios.get(`${EVO_URL}/instance/qr`, { 
+                        const qrRes = await axios.get(`${url}/instance/qr`, { 
                             headers: { 'apikey': instancia } 
                         });
                         return { base64: qrRes.data?.data?.Qrcode || qrRes.data?.Qrcode };
