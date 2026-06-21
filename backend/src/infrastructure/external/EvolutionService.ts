@@ -73,101 +73,67 @@ export class EvolutionService {
         const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
         const WEBHOOK_URL = `${backendUrl}/api/whatsapp/webhooks`;
         
-        let isEvoGo = false;
-        let evoGoState = '';
-
-        // 1. Check Evo Go status directly using instance token
+        // Assegura configuração de Webhook
         try {
-            const statusRes = await evolutionApi.get(`${url}/instance/status`, {
-                headers: { 'apikey': instancia }
-            });
-            isEvoGo = true;
-            evoGoState = statusRes.data?.instance?.state || statusRes.data?.state || '';
-        } catch (e) {}
+            await evolutionApi.post(`${url}/webhook/set/${instancia}`, {
+                webhook: {
+                    enabled: true,
+                    url: WEBHOOK_URL,
+                    webhookByEvents: false,
+                    webhookBase64: true,
+                    events: ["QRCODE_UPDATED", "MESSAGES_UPSERT", "CONNECTION_UPDATE"]
+                }
+            }, { headers: { 'apikey': key } }).catch(() => {});
+        } catch(e) {}
 
-        if (!isEvoGo) {
-            await this.createInstance(instancia).catch(() => {});
+        let connectResponse;
+        try {
+            // Tenta conectar no padrão Evolution API Classic (v1/v2 NodeJS)
+            let urlStr = `${url}/instance/connect/${instancia}`;
+            if (phone) urlStr += `?phone=${phone}`;
             
-            try {
-                const statusRes = await evolutionApi.get(`${url}/instance/status`, {
-                    headers: { 'apikey': instancia }
-                });
-                isEvoGo = true;
-                evoGoState = statusRes.data?.instance?.state || statusRes.data?.state || '';
-            } catch (e) {}
-        }
-
-        if (isEvoGo) {
-            if (evoGoState === 'open' || evoGoState === 'CONNECTED') {
-                return { connected: true, status: 'CONNECTED' };
-            }
-
-            if (evoGoState !== 'connecting') {
+            connectResponse = await evolutionApi.get(urlStr, {
+                headers: { 'apikey': key }
+            });
+        } catch (err: any) {
+            // Se retornar 404 ou 401, significa que é a Evolution Go!
+            if (err.response?.status === 404 || err.response?.status === 401 || err.response?.status === 400) {
+                logger.info("Detectado Evolution Go, conectando por rota alternativa...");
+                
                 try {
-                    await evolutionApi.post(`${url}/webhook/set/${instancia}`, {
-                        webhook: {
-                            enabled: true,
-                            url: WEBHOOK_URL,
-                            webhookByEvents: false,
-                            webhookBase64: true,
-                            events: ["QRCODE_UPDATED", "MESSAGES_UPSERT", "CONNECTION_UPDATE"]
-                        }
-                    }, { headers: { 'apikey': key } }).catch(() => {});
-
                     await evolutionApi.post(`${url}/instance/connect`, {
                         webhookUrl: WEBHOOK_URL
                     }, { headers: { 'apikey': instancia } });
                     
                     await new Promise(resolve => setTimeout(resolve, 2000));
-                } catch(e: any) {
-                    logger.error({ err: e.response?.data || e.message, instancia }, "Evolution Go Connect Error");
+                } catch(e) {}
+
+                try {
+                    connectResponse = await evolutionApi.get(`${url}/instance/qr?instance=${instancia}`, {
+                        headers: { 'apikey': instancia }
+                    });
+                } catch(qrErr: any) {
+                    logger.error({ err: qrErr.response?.data || qrErr.message }, "Erro ao buscar QR da Evolution Go");
+                    throw qrErr;
                 }
+            } else {
+                throw err;
             }
-
-            let result: any = { base64: null, pairingCode: null, status: evoGoState.toUpperCase() };
-            
-            try {
-                const qrRes = await evolutionApi.get(`${url}/instance/qr?instance=${instancia}`, { 
-                    headers: { 'apikey': instancia } 
-                });
-                result.base64 = qrRes.data?.data?.Qrcode || qrRes.data?.Qrcode || qrRes.data?.base64 || qrRes.data?.qrcode || null;
-            } catch(e: any) {
-                logger.error({ err: e.response?.data || e.message, instancia }, "Evolution Go QR Error");
-            }
-
-            return result;
         }
 
-        // --- EVOLUTION API (CLASSIC) FALLBACK LOGIC ---
-        try {
-            try {
-                await evolutionApi.post(`${url}/webhook/set/${instancia}`, {
-                    webhook: {
-                        enabled: true,
-                        url: WEBHOOK_URL,
-                        webhookByEvents: false,
-                        events: ["QRCODE_UPDATED", "MESSAGES_UPSERT", "CONNECTION_UPDATE"]
-                    }
-                }, { headers: { 'apikey': key } }).catch(() => {});
-            } catch(e) {}
-
-            let urlStr = `${url}/instance/connect/${instancia}`;
-            if (phone) urlStr += `?phone=${phone}`;
-            
-            const connectResponse = await evolutionApi.get(urlStr, {
-                headers: { 'apikey': key }
-            });
-
-            let finalData: any = {};
-            finalData.base64 = connectResponse.data?.base64 || connectResponse.data?.qrcode?.base64 || null;
-            finalData.pairingCode = connectResponse.data?.pairingCode || connectResponse.data?.code || null;
-            
-            return finalData;
-
-        } catch (finalErr: any) {
-            logger.error({ err: finalErr.response?.data || finalErr.message, instancia }, "Evolution API Classic Error");
-            return { base64: null, error: "Falha ao conectar na instancia. Verifique os logs." };
+        let finalData: any = connectResponse?.data || {};
+        if (!finalData.base64) {
+            if (finalData.qrcode?.base64) finalData.base64 = finalData.qrcode.base64;
+            else if (finalData.qrcode) finalData.base64 = finalData.qrcode;
+            else if (finalData.data?.qrcode) finalData.base64 = finalData.data.qrcode;
+            else if (finalData.data?.base64) finalData.base64 = finalData.data.base64;
         }
+        
+        if (!finalData.pairingCode) {
+            finalData.pairingCode = finalData.code || finalData.data?.code || finalData.data?.PairingCode;
+        }
+
+        return finalData;
     }
 
     public static async getPairingCode(instancia: string, phone: string): Promise<string | null> {
