@@ -39,10 +39,10 @@ export class EvolutionService {
     }
 
     public static async updateAdvancedSettings(instancia: string, settings: any): Promise<void> {
-        const { url } = await this.getCredentials();
+        const { url, key } = await this.getCredentials();
         try {
             await axios.put(`${url}/instance/${instancia}/advanced-settings`, settings, {
-                headers: { 'apikey': instancia, 'Content-Type': 'application/json' }
+                headers: { 'apikey': key, 'Content-Type': 'application/json' }
             });
         } catch (e: any) {
             console.error(`Evolution Update Settings Error for ${instancia}:`, e.response?.data || e.message);
