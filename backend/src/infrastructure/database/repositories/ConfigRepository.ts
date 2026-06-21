@@ -91,7 +91,7 @@ export class ConfigRepository {
                 connect_token, status_conexao,
                 sempre_online, rejeitar_chamadas, marcar_lidas, ignorar_grupos, ignorar_status
             ) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
         `, [
             tenant.instancia, tenant.nome_empresa, tenant.nome_admin, tenant.telefone_admin, tenant.telefone_whatsapp, tenant.chave_pix, tenant.nome_pix, 
             tenant.modelo_ia_cliente || '', tenant.modelo_ia_admin || '', tenant.nome_atendente, tenant.botoes_tempo, 
