@@ -44,7 +44,7 @@ export class ConfigRepository {
 
     public static async getByInstance(instancia: string): Promise<TenantConfig | null> {
         const result = await pool.query('SELECT * FROM configuracoes WHERE instancia = $1', [instancia]);
-        return result.rows[0] as TenantConfig || null;
+        return (result.rows[0] as TenantConfig) ?? null;
     }
 
     public static async generateTokenForLegacy(instancia: string): Promise<string> {

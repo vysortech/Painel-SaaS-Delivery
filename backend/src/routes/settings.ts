@@ -7,7 +7,7 @@ const router = Router();
 // Auto-migrate
 GlobalSettingsRepository.initTable().catch(console.error);
 
-// router.use(authMiddleware);
+router.use(authMiddleware);
 
 router.get('/', async (req: Request, res: Response) => {
     try {

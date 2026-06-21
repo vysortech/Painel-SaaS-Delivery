@@ -1,25 +1,32 @@
 import cron from 'node-cron';
 import pool from '../db';
 import axios from 'axios';
-
-const EVO_URL = process.env.EVOLUTION_API_URL || 'http://116.203.152.114:8080';
-const EVO_KEY = process.env.EVOLUTION_API_KEY || 'X8G9W2M4V5N7B3L1K6J0H9P2Y3T5C8F1';
+import { GlobalSettingsRepository } from '../repositories/GlobalSettingsRepository';
 
 export function startBillingCron() {
     // Roda todo dia às 08:00 da manhã
     cron.schedule('0 8 * * *', async () => {
         console.log('[CRON] Verificando vencimentos de mensalidades...');
+        
         try {
+            const settings = await GlobalSettingsRepository.get().catch(() => null);
+            const EVO_URL = settings?.evolution_api_url || process.env.EVOLUTION_API_URL;
+            const EVO_KEY = settings?.evolution_api_key || process.env.EVOLUTION_API_KEY;
+
+            if (!EVO_URL || !EVO_KEY) {
+                console.error('[CRON] Evolution API não configurada. Abortando cobrança.');
+                return;
+            }
+
             // Busca tenants onde a validade é hoje, amanhã ou em 3 dias.
-            // Para simplificar no SQL do Postgres:
             const result = await pool.query(`
-                SELECT id, name, phone, validade, instancia,
-                EXTRACT(DAY FROM validade - CURRENT_DATE) as days_left
-                FROM tenants
-                WHERE validade IS NOT NULL
-                AND phone IS NOT NULL
+                SELECT instancia, nome_empresa as name, telefone_admin as phone, data_vencimento as validade,
+                EXTRACT(DAY FROM data_vencimento::date - CURRENT_DATE) as days_left
+                FROM configuracoes
+                WHERE data_vencimento IS NOT NULL
+                AND telefone_admin IS NOT NULL
                 AND instancia IS NOT NULL
-                AND EXTRACT(DAY FROM validade - CURRENT_DATE) IN (0, 1, 3)
+                AND EXTRACT(DAY FROM data_vencimento::date - CURRENT_DATE) IN (0, 1, 3)
             `);
 
             const tenants = result.rows;

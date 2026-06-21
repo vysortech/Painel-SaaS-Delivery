@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth';
 import configRoutes from './routes/config';
@@ -17,7 +19,24 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-app.use(cors());
+// Security Middleware
+app.use(helmet());
+app.use(cors({
+    origin: process.env.FRONTEND_URL || 'https://food.vysortech.app.br',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-webhook-secret']
+}));
+
+// Global Rate Limiting
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per `window`
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Muitas requisições deste IP, tente novamente em 15 minutos.' }
+});
+app.use(limiter);
+
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);

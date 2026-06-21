@@ -3,11 +3,14 @@ import { ConfigRepository } from '../repositories/ConfigRepository';
 import { TenantConfig } from '../interfaces/Config';
 import crypto from 'crypto';
 import { EvolutionService } from '../services/EvolutionService';
+import { authMiddleware } from '../middlewares/authMiddleware';
 
 const router = Router();
 
 // Auto-migrate
 ConfigRepository.initTable().catch(console.error);
+
+router.use(authMiddleware);
 
 // Get all tenants
 router.get('/', async (req: Request, res: Response) => {

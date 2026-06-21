@@ -4,7 +4,7 @@ import { authMiddleware, AuthRequest } from '../middlewares/authMiddleware';
 
 const router = Router();
 
-// router.use(authMiddleware);
+router.use(authMiddleware);
 
 router.get('/mrr', async (req: AuthRequest, res: Response) => {
     try {

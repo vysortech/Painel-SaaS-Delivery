@@ -7,7 +7,13 @@ const router = Router();
 // Auto-migrate
 AlertRepository.initTable().catch(console.error);
 
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || '';
+
 router.post('/webhook', async (req: Request, res: Response) => {
+    // Validate webhook secret if configured
+    if (WEBHOOK_SECRET && req.headers['x-webhook-secret'] !== WEBHOOK_SECRET) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
     const { instancia, n8n_execution_id, node_name, error_message } = req.body;
     try {
         await AlertRepository.create(instancia, n8n_execution_id, node_name, error_message);
@@ -17,7 +23,7 @@ router.post('/webhook', async (req: Request, res: Response) => {
     }
 });
 
-// router.use(authMiddleware);
+router.use(authMiddleware);
 
 router.get('/', async (req: Request, res: Response) => {
     try {
@@ -29,3 +35,4 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 export default router;
+

@@ -1,7 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { EvolutionService } from '../services/EvolutionService';
+import { authMiddleware } from '../middlewares/authMiddleware';
 
 const router = Router();
+
+router.use(authMiddleware);
 
 router.get('/connect/:instancia', async (req: Request, res: Response) => {
     const { instancia } = req.params;

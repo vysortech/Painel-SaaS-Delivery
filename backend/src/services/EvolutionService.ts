@@ -4,10 +4,12 @@ import { GlobalSettingsRepository } from '../repositories/GlobalSettingsReposito
 export class EvolutionService {
     private static async getCredentials() {
         const settings = await GlobalSettingsRepository.get().catch(() => null);
-        return {
-            url: settings?.evolution_api_url || process.env.EVOLUTION_API_URL || 'http://116.203.152.114:8080',
-            key: settings?.evolution_api_key || process.env.EVOLUTION_API_KEY || 'X8G9W2M4V5N7B3L1K6J0H9P2Y3T5C8F1'
-        };
+        const url = settings?.evolution_api_url || process.env.EVOLUTION_API_URL;
+        const key = settings?.evolution_api_key || process.env.EVOLUTION_API_KEY;
+        if (!url || !key) {
+            throw new Error('Evolution API URL ou API Key não configurados. Verifique as Configurações Globais ou variáveis de ambiente.');
+        }
+        return { url, key };
     }
 
     public static async logoutInstance(instancia: string): Promise<void> {

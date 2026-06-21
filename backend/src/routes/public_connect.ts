@@ -1,11 +1,10 @@
 import { Router, Request, Response } from 'express';
 import axios from 'axios';
 import { ConfigRepository } from '../repositories/ConfigRepository';
+import { GlobalSettingsRepository } from '../repositories/GlobalSettingsRepository';
 import { EvolutionService } from '../services/EvolutionService';
 
 const router = Router();
-
-const EVO_URL = process.env.EVOLUTION_API_URL || 'http://116.203.152.114:8080';
 
 router.get('/qrcode/:token', async (req: Request, res: Response) => {
     const { token } = req.params;
@@ -14,6 +13,13 @@ router.get('/qrcode/:token', async (req: Request, res: Response) => {
         
         if (!tenant) {
             return res.status(404).json({ error: 'Link inválido ou expirado' });
+        }
+
+        const settings = await GlobalSettingsRepository.get().catch(() => null);
+        const EVO_URL = settings?.evolution_api_url || process.env.EVOLUTION_API_URL;
+        
+        if (!EVO_URL) {
+            return res.status(500).json({ error: 'Evolution API não configurada.' });
         }
 
         const instancia = tenant.instancia;
