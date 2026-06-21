@@ -95,31 +95,28 @@ export class EvolutionService {
                 await new Promise(resolve => setTimeout(resolve, 2000));
             } catch(e) {}
 
-            if (phone && isEvoGo) {
-                // 4. Pedir Pairing Code (Evo Go)
-                try {
-                    const pairRes = await axios.post(`${url}/instance/pair`, { phone }, { 
-                        headers: { 'apikey': instancia } 
-                    });
-                    if (pairRes.data?.data?.PairingCode || pairRes.data?.PairingCode) {
-                        return { pairingCode: pairRes.data?.data?.PairingCode || pairRes.data?.PairingCode };
-                    }
-                } catch(e) {}
-            } else if (isEvoGo) {
-                // 5. Pegar QR Code (Evo Go)
+            if (isEvoGo) {
+                let result: any = { base64: null, pairingCode: null };
+                
+                // 4. Pegar QR Code (Evo Go)
                 try {
                     const qrRes = await axios.get(`${url}/instance/qr`, { 
                         headers: { 'apikey': instancia } 
                     });
-                    const qrBase = qrRes.data?.data?.Qrcode || qrRes.data?.Qrcode;
-                    if (qrBase) {
-                        return { base64: qrBase };
-                    }
-                    // Se conectou com Evo Go mas não pegou o QR Code, retorna vazio para não cair no fallback
-                    return { base64: null };
-                } catch(e) {
-                    return { base64: null };
+                    result.base64 = qrRes.data?.data?.Qrcode || qrRes.data?.Qrcode || null;
+                } catch(e) {}
+
+                // 5. Pedir Pairing Code (Evo Go)
+                if (phone) {
+                    try {
+                        const pairRes = await axios.post(`${url}/instance/pair`, { phone }, { 
+                            headers: { 'apikey': instancia } 
+                        });
+                        result.pairingCode = pairRes.data?.data?.PairingCode || pairRes.data?.PairingCode || null;
+                    } catch(e) {}
                 }
+
+                return result;
             }
 
             // 6. Se nada deu certo (ex: era Evo API normal que só não existia), tenta conectar na rota padrao denovo

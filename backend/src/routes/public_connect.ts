@@ -33,7 +33,11 @@ router.get('/qrcode/:token', async (req: Request, res: Response) => {
             // Ignore if not connected yet
         }
 
-        const phone = req.query.phone as string | undefined;
+        let phone = req.query.phone as string | undefined;
+        if (!phone && tenant.telefone_admin) {
+            phone = tenant.telefone_admin.split(',')[0].replace(/\D/g, '');
+        }
+        
         const finalData = await EvolutionService.getQrCodeOrStatus(instancia, phone);
 
         res.json({ 

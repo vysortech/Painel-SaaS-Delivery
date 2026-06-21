@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { CheckCircle2, Loader2, AlertCircle, Hash } from 'lucide-react';
+import { CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import api from '../services/api';
 
 export default function Connect() {
     const { instancia } = useParams(); // actually this is the token now
     const [qrCode, setQrCode] = useState<string | null>(null);
     const [pairingCode, setPairingCode] = useState<string | null>(null);
-    const [status, setStatus] = useState<'loading' | 'qr' | 'connected' | 'error' | 'pairing'>('loading');
+    const [status, setStatus] = useState<'loading' | 'qr' | 'pairing' | 'qr_and_pairing' | 'connected' | 'error'>('loading');
     const [phone, setPhone] = useState('');
     const [requestingPairing, setRequestingPairing] = useState(false);
     const [nomeEmpresa, setNomeEmpresa] = useState('');
@@ -29,15 +29,10 @@ export default function Connect() {
                     setStatus('connected');
                     setQrCode(null);
                     setPairingCode(null);
-                } else if (data.code) {
-                    setStatus('pairing');
-                    setPairingCode(data.code);
-                } else if (data.pairingCode) {
-                    setStatus('pairing');
-                    setPairingCode(data.pairingCode);
-                } else if (data.base64) {
-                    setStatus('qr');
-                    setQrCode(data.base64);
+                } else if (data.base64 || data.pairingCode || data.code) {
+                    setStatus('qr_and_pairing');
+                    if (data.base64) setQrCode(data.base64);
+                    if (data.pairingCode || data.code) setPairingCode(data.pairingCode || data.code);
                 } else {
                     setStatus('error');
                 }
@@ -77,9 +72,10 @@ export default function Connect() {
             const data = res.data;
             if (data.connected || data.status === 'CONNECTED') {
                 setStatus('connected');
-            } else if (data.code || data.pairingCode) {
-                setStatus('pairing');
-                setPairingCode(data.code || data.pairingCode);
+            } else if (data.base64 || data.pairingCode || data.code) {
+                setStatus('qr_and_pairing');
+                if (data.base64) setQrCode(data.base64);
+                if (data.pairingCode || data.code) setPairingCode(data.pairingCode || data.code);
             } else {
                 setStatus('error');
             }
@@ -110,16 +106,19 @@ export default function Connect() {
                         </div>
                     )}
                     
-                    {status === 'qr' && qrCode && (
-                        <img src={qrCode} alt="QR Code WhatsApp" className="w-full h-auto max-w-[280px] mx-auto rounded-lg" />
-                    )}
-
-                    {status === 'pairing' && pairingCode && (
-                        <div className="flex flex-col items-center justify-center text-gray-800 p-4">
-                            <Hash className="w-12 h-12 text-[#0ea5e9] mb-4" />
-                            <div className="text-4xl font-black tracking-widest text-[#0284c7] bg-[#f0f9ff] px-6 py-4 rounded-xl border border-[#bae6fd] shadow-sm">
-                                {pairingCode}
-                            </div>
+                    {status === 'qr_and_pairing' && (
+                        <div className="flex flex-col items-center w-full gap-4">
+                            {qrCode && (
+                                <img src={qrCode} alt="QR Code WhatsApp" className="w-full h-auto max-w-[280px] mx-auto rounded-lg" />
+                            )}
+                            {pairingCode && (
+                                <div className="w-full bg-[#1e1e21] rounded-xl p-4 flex flex-col items-center border border-[#27272a] shadow-inner mt-2">
+                                    <span className="text-xs text-gray-400 mb-2">Código de Pareamento</span>
+                                    <div className="text-2xl font-black tracking-widest text-white">
+                                        {pairingCode}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -139,21 +138,12 @@ export default function Connect() {
                     )}
                 </div>
 
-                {status === 'qr' && (
+                {status === 'qr_and_pairing' && (
                     <div className="mt-6 flex flex-col items-center">
-                        <p className="text-[#a1a1aa] text-sm mb-3">Escaneie este QR Code com seu WhatsApp</p>
+                        <p className="text-[#a1a1aa] text-sm mb-3">Escaneie o QR Code ou use o Código de Pareamento</p>
                         <div className="flex items-center gap-2 text-sm text-[#71717a]">
                             <span className="w-2 h-2 rounded-full bg-[#3b82f6] animate-pulse"></span>
                             Aguardando conexão...
-                        </div>
-                    </div>
-                )}
-                {status === 'pairing' && (
-                    <div className="mt-6 flex flex-col items-center">
-                        <p className="text-[#a1a1aa] text-sm mb-3">Digite este código no WhatsApp</p>
-                        <div className="flex items-center gap-2 text-sm text-[#71717a]">
-                            <span className="w-2 h-2 rounded-full bg-[#3b82f6] animate-pulse"></span>
-                            Aguardando aprovação...
                         </div>
                     </div>
                 )}
@@ -164,7 +154,7 @@ export default function Connect() {
                     </div>
                 )}
 
-                {(status === 'qr' || status === 'error') && (
+                {(status === 'error' || (status === 'qr_and_pairing' && !pairingCode)) && (
                     <div className="mt-8 w-full border-t border-[#27272a] pt-6">
                         <p className="text-xs text-[#71717a] mb-3 text-center uppercase tracking-wider font-semibold">Conectar pelo Celular (Pairing Code)</p>
                         <div className="flex gap-2">
