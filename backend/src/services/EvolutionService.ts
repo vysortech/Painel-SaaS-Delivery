@@ -87,7 +87,9 @@ export class EvolutionService {
             // 3. Tentar conectar (Evo Go)
             let isEvoGo = false;
             try {
-                await axios.post(`${url}/instance/connect`, {}, { headers: { 'apikey': instancia } });
+                await axios.post(`${url}/instance/connect`, {
+                    webhookUrl: WEBHOOK_URL
+                }, { headers: { 'apikey': instancia } });
                 isEvoGo = true;
                 // Aguarda 2 segundos para o Evo Go gerar o QR Code
                 await new Promise(resolve => setTimeout(resolve, 2000));
@@ -113,7 +115,11 @@ export class EvolutionService {
                     if (qrBase) {
                         return { base64: qrBase };
                     }
-                } catch(e) {}
+                    // Se conectou com Evo Go mas não pegou o QR Code, retorna vazio para não cair no fallback
+                    return { base64: null };
+                } catch(e) {
+                    return { base64: null };
+                }
             }
 
             // 6. Se nada deu certo (ex: era Evo API normal que só não existia), tenta conectar na rota padrao denovo

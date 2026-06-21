@@ -348,8 +348,8 @@ export default function Clients() {
                              <p className="text-xs text-gray-500 mt-2">Nome amigável para identificação do cliente</p>
                          </div>
                          <div>
-                             <label className="block text-sm font-medium text-gray-300 mb-1 flex justify-between">
-                                 <span>Nome do Canal (Instância) <span className="text-red-500">*</span></span>
+                             <label className="flex items-center justify-between text-sm font-medium text-gray-300 mb-1">
+                                 Nome do Canal (Instância) *
                                  {formData.instancia && (
                                      <button type="button" onClick={() => {
                                          navigator.clipboard.writeText(`${window.location.origin}/conectar/${formData.connect_token || formData.instancia}`);
@@ -359,13 +359,13 @@ export default function Clients() {
                                      </button>
                                  )}
                              </label>
-                             <input required disabled={!editingTenant ? true : false} type="text" 
+                             <input type="hidden" name="instancia" value={formData.instancia || ''} />
+                             <input required disabled={true} type="text" 
                                 className="w-full bg-[#131316] border border-gray-800 rounded-lg p-3 text-gray-400 cursor-not-allowed outline-none"
                                 value={formData.instancia || ''} 
-                                onChange={e => editingTenant && setFormData({...formData, instancia: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '')})} 
                                 placeholder="Gerado automaticamente"
                              />
-                             <p className="text-xs text-gray-500 mt-2">{!editingTenant ? 'Gerado automaticamente do nome de exibição' : 'Instância Evolution API'}</p>
+                             <p className="text-xs text-gray-500 mt-2">Este campo é gerado automaticamente a partir do nome da empresa e será usado internamente pela IA.</p>
                          </div>
                      </div>
 
