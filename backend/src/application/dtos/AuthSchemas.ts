@@ -22,6 +22,6 @@ export const updateUserSchema = z.object({
   body: z.object({
     nome: z.string().min(3).max(100).optional(),
     username: z.string().min(3).max(50).regex(/^[a-zA-Z0-9_]+$/).optional(),
-    password: z.string().min(6).max(100).optional(),
+    password: z.string().min(6).max(100).optional().or(z.literal('')),
   }),
 });
