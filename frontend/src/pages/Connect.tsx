@@ -68,33 +68,6 @@ export default function Connect() {
         };
     }, [instancia, status, requestingPairing]);
 
-    const handleRequestPairing = async () => {
-        if (!phone || phone.length < 10) return;
-        setRequestingPairing(true);
-        setStatus('loading');
-        try {
-            const res = await api.get(`/public/whatsapp/qrcode/${instancia}?phone=${phone.replace(/\D/g, '')}`);
-            const data = res.data;
-            if (data.connected || data.status === 'CONNECTED' || data.status === 'OPEN') {
-                setStatus('connected');
-                setQrCode(null);
-                setPairingCode(null);
-            } else if (data.status === 'CONNECTING') {
-                setStatus('loading');
-            } else if (data.base64 || data.pairingCode || data.code) {
-                setStatus('qr_and_pairing');
-                if (data.base64) setQrCode(data.base64);
-                if (data.pairingCode || data.code) setPairingCode(data.pairingCode || data.code);
-            } else {
-                setStatus('error');
-            }
-        } catch {
-            setStatus('error');
-        } finally {
-            setRequestingPairing(false);
-        }
-    };
-
     return (
         <div className="min-h-screen bg-[#09090b] flex items-center justify-center p-4">
             <div className="max-w-[400px] w-full flex flex-col gap-3">
@@ -126,31 +99,10 @@ export default function Connect() {
                     {status === 'qr_and_pairing' && qrCode && (
                         <div className="flex flex-col items-center w-full">
                             <img src={qrCode} alt="QR Code WhatsApp" className="w-full h-auto max-w-[260px] mx-auto mb-4" />
-                            
-                            {!pairingCode ? (
-                                <div className="w-full mt-2">
-                                    <p className="text-xs text-gray-500 mb-2 font-medium">Ou conecte com o Código de Pareamento:</p>
-                                    <div className="flex gap-2">
-                                        <input 
-                                            type="text" 
-                                            placeholder="Seu celular ex: 5511999999999" 
-                                            value={phone}
-                                            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                                            className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-emerald-500 transition-colors"
-                                        />
-                                        <button 
-                                            onClick={handleRequestPairing}
-                                            disabled={requestingPairing || phone.length < 10}
-                                            className="bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-300 text-white px-3 py-2 rounded-lg text-sm font-bold transition-colors"
-                                        >
-                                            {requestingPairing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Gerar'}
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="w-full bg-[#1e1e21] rounded-xl p-5 flex flex-col items-center shadow-lg border border-[#3f3f46] mt-2">
-                                    <span className="text-xs text-gray-400 mb-1">Código de Pareamento</span>
-                                    <div className="text-[22px] font-black tracking-[0.2em] text-white">
+                            {pairingCode && (
+                                <div className="w-full mt-2 text-center bg-gray-800 border border-gray-700 rounded-xl p-4">
+                                    <p className="text-sm text-gray-400 mb-1 font-medium">Código de Pareamento:</p>
+                                    <div className="text-[22px] font-black tracking-[0.2em] text-emerald-400">
                                         {pairingCode}
                                     </div>
                                 </div>

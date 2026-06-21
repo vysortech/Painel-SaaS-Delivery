@@ -59,7 +59,7 @@ export class ConfigRepository {
     public static async create(tenant: Partial<TenantConfig>, connectToken: string): Promise<void> {
         await pool.query(`
             INSERT INTO configuracoes (
-                instancia, nome_empresa, nome_admin, telefone_admin, chave_pix, nome_pix, 
+                instancia, nome_empresa, nome_admin, telefone_admin, telefone_whatsapp, chave_pix, nome_pix, 
                 modelo_ia_cliente, modelo_ia_admin, nome_atendente, botoes_tempo, 
                 valor_assinatura, data_vencimento, status_assinatura, plano_tipo, contexto_loja, dias_carencia,
                 connect_token, status_conexao,
@@ -67,7 +67,7 @@ export class ConfigRepository {
             ) 
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
         `, [
-            tenant.instancia, tenant.nome_empresa, tenant.nome_admin, tenant.telefone_admin, tenant.chave_pix, tenant.nome_pix, 
+            tenant.instancia, tenant.nome_empresa, tenant.nome_admin, tenant.telefone_admin, tenant.telefone_whatsapp, tenant.chave_pix, tenant.nome_pix, 
             tenant.modelo_ia_cliente || '', tenant.modelo_ia_admin || '', tenant.nome_atendente, tenant.botoes_tempo, 
             tenant.valor_assinatura || 0, tenant.data_vencimento || null, tenant.status_assinatura || 'ativo', 
             tenant.plano_tipo || 'recorrente', tenant.contexto_loja || '', tenant.dias_carencia || 0,
@@ -80,14 +80,14 @@ export class ConfigRepository {
     public static async update(instancia: string, tenant: Partial<TenantConfig>): Promise<void> {
         await pool.query(`
             UPDATE configuracoes SET 
-                nome_empresa = $1, nome_admin = $2, telefone_admin = $3, chave_pix = $4, nome_pix = $5, 
-                modelo_ia_cliente = $6, modelo_ia_admin = $7, nome_atendente = $8, botoes_tempo = $9,
-                valor_assinatura = $10, data_vencimento = $11, status_assinatura = $12, plano_tipo = $13, 
-                contexto_loja = $14, dias_carencia = $15,
-                sempre_online = $16, rejeitar_chamadas = $17, marcar_lidas = $18, ignorar_grupos = $19, ignorar_status = $20
-            WHERE instancia = $21
+                nome_empresa = $1, nome_admin = $2, telefone_admin = $3, telefone_whatsapp = $4, chave_pix = $5, nome_pix = $6, 
+                modelo_ia_cliente = $7, modelo_ia_admin = $8, nome_atendente = $9, botoes_tempo = $10,
+                valor_assinatura = $11, data_vencimento = $12, status_assinatura = $13, plano_tipo = $14, 
+                contexto_loja = $15, dias_carencia = $16,
+                sempre_online = $17, rejeitar_chamadas = $18, marcar_lidas = $19, ignorar_grupos = $20, ignorar_status = $21
+            WHERE instancia = $22
         `, [
-            tenant.nome_empresa, tenant.nome_admin, tenant.telefone_admin, tenant.chave_pix, tenant.nome_pix, 
+            tenant.nome_empresa, tenant.nome_admin, tenant.telefone_admin, tenant.telefone_whatsapp, tenant.chave_pix, tenant.nome_pix, 
             tenant.modelo_ia_cliente || '', tenant.modelo_ia_admin || '', tenant.nome_atendente, tenant.botoes_tempo,
             tenant.valor_assinatura, tenant.data_vencimento || null, tenant.status_assinatura, tenant.plano_tipo, 
             tenant.contexto_loja, tenant.dias_carencia, 

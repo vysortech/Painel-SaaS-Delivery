@@ -390,12 +390,14 @@ export default function Clients() {
                      </div>
 
                      <div>
-                         <label className="block text-sm font-medium text-gray-300 mb-1">Número do WhatsApp Principal</label>
+                         <label className="flex items-center justify-between text-sm font-medium text-gray-300 mb-1">
+                             Número do WhatsApp Principal <span className="text-red-500">*</span>
+                         </label>
                          <div className="flex">
                              <span className="bg-[#131316] border border-gray-800 border-r-0 rounded-l-lg px-4 py-3 text-gray-400 font-medium text-sm flex items-center justify-center whitespace-nowrap gap-2">
                                 <span className="text-lg">🇧🇷</span> +55
                              </span>
-                             <input type="text" 
+                             <input required type="text" 
                                 className="w-full bg-[#18181b] border border-gray-700/50 rounded-r-lg p-3 text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all placeholder-gray-600"
                                 placeholder="(11) 99999-9999"
                                 value={formatPhone(formData.telefone_whatsapp?.replace(/^55/, '') || '')}
