@@ -73,67 +73,120 @@ export class EvolutionService {
         const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
         const WEBHOOK_URL = `${backendUrl}/api/whatsapp/webhooks`;
         
-        // Assegura configuração de Webhook
-        try {
-            await evolutionApi.post(`${url}/webhook/set/${instancia}`, {
-                webhook: {
-                    enabled: true,
-                    url: WEBHOOK_URL,
-                    webhookByEvents: false,
-                    webhookBase64: true,
-                    events: ["QRCODE_UPDATED", "MESSAGES_UPSERT", "CONNECTION_UPDATE"]
-                }
-            }, { headers: { 'apikey': key } }).catch(() => {});
-        } catch(e) {}
+        let isEvoGo = false;
+        let evoGoState = '';
 
-        let connectResponse;
+        // 1. Check Evo Go status directly using instance token
         try {
-            // Tenta conectar no padrão Evolution API Classic (v1/v2 NodeJS)
-            let urlStr = `${url}/instance/connect/${instancia}`;
-            if (phone) urlStr += `?phone=${phone}`;
-            
-            connectResponse = await evolutionApi.get(urlStr, {
-                headers: { 'apikey': key }
+            const statusRes = await evolutionApi.get(`${url}/instance/status`, {
+                headers: { 'apikey': instancia }
             });
-        } catch (err: any) {
-            // Se retornar 404 ou 401, significa que é a Evolution Go!
-            if (err.response?.status === 404 || err.response?.status === 401 || err.response?.status === 400) {
-                logger.info("Detectado Evolution Go, conectando por rota alternativa...");
-                
+            isEvoGo = true;
+            evoGoState = statusRes.data?.instance?.state || statusRes.data?.state || '';
+        } catch (e) {
+            // It might fail if the instance is not created yet, or if it's the old Evolution API
+        }
+
+        // If it failed, let's try creating it just in case it's a new Evo Go instance that doesn't exist yet
+        if (!isEvoGo) {
+            await this.createInstance(instancia).catch(() => {});
+            
+            // Try checking status again
+            try {
+                const statusRes = await evolutionApi.get(`${url}/instance/status`, {
+                    headers: { 'apikey': instancia }
+                });
+                isEvoGo = true;
+                evoGoState = statusRes.data?.instance?.state || statusRes.data?.state || '';
+            } catch (e) {}
+        }
+
+        // --- EVOLUTION GO LOGIC ---
+        if (isEvoGo) {
+            if (evoGoState === 'open') {
+                return { connected: true, status: 'CONNECTED' };
+            }
+
+            // Only request a new connection if it's not already connecting
+            if (evoGoState !== 'connecting') {
                 try {
+                    await evolutionApi.post(`${url}/webhook/set/${instancia}`, {
+                        webhook: {
+                            enabled: true,
+                            url: WEBHOOK_URL,
+                            webhookByEvents: false,
+                            webhookBase64: true,
+                            events: ["QRCODE_UPDATED", "MESSAGES_UPSERT", "MESSAGES_UPDATE", "SEND_MESSAGE", "CONNECTION_UPDATE", "CALL"]
+                        }
+                    }, { headers: { 'apikey': key } }).catch(() => {});
+
                     await evolutionApi.post(`${url}/instance/connect`, {
                         webhookUrl: WEBHOOK_URL
                     }, { headers: { 'apikey': instancia } });
                     
+                    // Wait a bit for the Bailey's socket to generate the QR Code
                     await new Promise(resolve => setTimeout(resolve, 2000));
-                } catch(e) {}
-
-                try {
-                    connectResponse = await evolutionApi.get(`${url}/instance/qr?instance=${instancia}`, {
-                        headers: { 'apikey': instancia }
-                    });
-                } catch(qrErr: any) {
-                    logger.error({ err: qrErr.response?.data || qrErr.message }, "Erro ao buscar QR da Evolution Go");
-                    throw qrErr;
+                } catch(e: any) {
+                    logger.error({ err: e.response?.data || e.message }, "Evolution Go Connect Error");
                 }
-            } else {
-                throw err;
             }
+
+            let result: any = { base64: null, pairingCode: null };
+            
+            // Try fetching the QR Code
+            try {
+                const qrRes = await evolutionApi.get(`${url}/instance/qr`, { 
+                    headers: { 'apikey': instancia } 
+                });
+                result.base64 = qrRes.data?.data?.Qrcode || qrRes.data?.Qrcode || qrRes.data?.base64 || null;
+            } catch(e) {}
+
+            // Try fetching the Pairing Code if phone is provided
+            if (phone) {
+                try {
+                    const pairRes = await evolutionApi.post(`${url}/instance/pair`, { phone }, { 
+                        headers: { 'apikey': instancia } 
+                    });
+                    result.pairingCode = pairRes.data?.data?.PairingCode || pairRes.data?.PairingCode || pairRes.data?.code || null;
+                } catch(e) {}
+            }
+
+            return result;
         }
 
-        let finalData: any = connectResponse?.data || {};
-        if (!finalData.base64) {
-            if (finalData.qrcode?.base64) finalData.base64 = finalData.qrcode.base64;
-            else if (finalData.qrcode) finalData.base64 = finalData.qrcode;
-            else if (finalData.data?.qrcode) finalData.base64 = finalData.data.qrcode;
-            else if (finalData.data?.base64) finalData.base64 = finalData.data.base64;
-        }
-        
-        if (!finalData.pairingCode) {
-            finalData.pairingCode = finalData.code || finalData.data?.code || finalData.data?.PairingCode;
-        }
+        // --- EVOLUTION API (CLASSIC) FALLBACK LOGIC ---
+        try {
+            // Setup Webhook
+            try {
+                await evolutionApi.post(`${url}/webhook/set/${instancia}`, {
+                    webhook: {
+                        enabled: true,
+                        url: WEBHOOK_URL,
+                        byEvents: false,
+                        base64: true,
+                        events: ["QRCODE_UPDATED", "MESSAGES_UPSERT", "MESSAGES_UPDATE", "SEND_MESSAGE", "CONNECTION_UPDATE", "CALL"]
+                    }
+                }, { headers: { 'apikey': key } });
+            } catch(e) {}
 
-        return finalData;
+            let urlStr = `${url}/instance/connect/${instancia}`;
+            if (phone) urlStr += `?phone=${phone}`;
+            
+            const connectResponse = await evolutionApi.get(urlStr, {
+                headers: { 'apikey': key }
+            });
+
+            let finalData = connectResponse.data || {};
+            if (!finalData.base64) {
+                const qr = finalData.qrcode || finalData.Qrcode || finalData.data?.qrcode || finalData.data?.Qrcode || finalData.data?.base64;
+                if (qr) finalData.base64 = qr;
+            }
+            return finalData;
+
+        } catch (finalErr: any) {
+            logger.error({ err: finalErr.response?.data || finalErr.message }, "Evolution API Classic Error");
+            return { base64: null, error: "Falha ao conectar na instancia. Verifique os logs." };
+        }
     }
 
     public static async getPairingCode(instancia: string, phone: string): Promise<string | null> {
