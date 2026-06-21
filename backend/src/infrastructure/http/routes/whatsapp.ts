@@ -73,11 +73,16 @@ router.delete('/instances/:instanceName', async (req: Request, res: Response) =>
 // GET /instances/:id/settings
 router.get('/instances/:instanceId/settings', async (req: Request, res: Response) => {
     try {
-        const { instanceId } = req.params;
-        let settings = await InstanceRepository.getSettings(instanceId);
+        const { instanceId } = req.params; // instanceId here is instance_name
+        let instance = await InstanceRepository.getByName(instanceId);
+        if (!instance) {
+            return res.json({});
+        }
+
+        let settings = await InstanceRepository.getSettings(instance.id);
         if (!settings) {
             settings = { 
-                id: 'new', instance_id: instanceId, 
+                id: 'new', instance_id: instance.id, 
                 always_online: false, reject_call: false, read_messages: false, 
                 ignore_groups: false, ignore_status: false, 
                 created_at: new Date(), updated_at: new Date()
@@ -92,16 +97,23 @@ router.get('/instances/:instanceId/settings', async (req: Request, res: Response
 // PUT /instances/:id/settings
 router.put('/instances/:instanceId/settings', async (req: Request, res: Response) => {
     try {
-        const { instanceId } = req.params;
+        const { instanceId } = req.params; // instanceId is instance_name
         const body = req.body;
         
-        await InstanceRepository.upsertSettings(instanceId, body);
-        
-        // Sincroniza com a API Externa da Evolution
-        const instance = await InstanceRepository.getByName(instanceId); // Opcional, depende se o param é nome ou ID
-        const instanceName = instance ? instance.instance_name : instanceId;
+        let instance = await InstanceRepository.getByName(instanceId);
+        if (!instance) {
+            instance = await InstanceRepository.create({
+                tenant_id: instanceId, // using instanceName as fallback tenant
+                instance_name: instanceId,
+                instance_token: instanceId,
+                status: 'PENDING'
+            });
+            await EvolutionService.createInstance(instanceId).catch(() => {});
+        }
 
-        await EvolutionService.updateAdvancedSettings(instanceName, {
+        await InstanceRepository.upsertSettings(instance.id, body);
+        
+        await EvolutionService.updateAdvancedSettings(instanceId, {
             alwaysOnline: body.always_online,
             rejectCall: body.reject_call,
             readMessages: body.read_messages,

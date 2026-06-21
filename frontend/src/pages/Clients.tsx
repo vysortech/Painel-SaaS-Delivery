@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useClients } from '../hooks/useClients';
 import { ClientList } from '../components/clients/ClientList';
 import { ClientForm } from '../components/clients/ClientForm';
@@ -6,15 +6,31 @@ import { ConnectionScreen } from '../components/whatsapp/ConnectionScreen';
 import { Toast, type ToastMessage } from '../components/common/Toast';
 import type { TenantConfig } from '../types';
 import { Trash2 } from 'lucide-react';
+import { useSocket } from '../hooks/useSocket';
 
 export default function Clients() {
-  const { tenants, saveClient, deleteClient, toggleStatus, logoutWhatsapp } = useClients();
+  const { tenants, saveClient, deleteClient, toggleStatus, logoutWhatsapp, mutate } = useClients();
+  const { socket } = useSocket('admin'); // Listen as admin or general
   const [activeTab, setActiveTab] = useState<'lista' | 'cadastro'>('lista');
   const [editingTenant, setEditingTenant] = useState<TenantConfig | null>(null);
   
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [deleteModal, setDeleteModal] = useState<string | null>(null);
   const [connectingTenant, setConnectingTenant] = useState<TenantConfig | null>(null);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleUpdate = () => {
+      mutate();
+    };
+
+    socket.on('instance.connection_update', handleUpdate);
+
+    return () => {
+      socket.off('instance.connection_update', handleUpdate);
+    };
+  }, [socket, mutate]);
 
   const showToast = (message: string, type: 'success' | 'error') => {
       setToast({ message, type });

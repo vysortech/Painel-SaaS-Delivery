@@ -38,15 +38,38 @@ export class ConfigRepository {
     }
 
     public static async getAll(limit: number = 100, offset: number = 0): Promise<TenantConfig[]> {
-        const result = await pool.query(
-            'SELECT * FROM configuracoes ORDER BY data_vencimento DESC LIMIT $1 OFFSET $2',
-            [limit, offset]
-        );
+        const result = await pool.query(`
+            SELECT 
+                c.*,
+                COALESCE(wi.status, c.status_conexao) as status_conexao,
+                COALESCE(ws.always_online, c.sempre_online) as sempre_online,
+                COALESCE(ws.reject_call, c.rejeitar_chamadas) as rejeitar_chamadas,
+                COALESCE(ws.read_messages, c.marcar_lidas) as marcar_lidas,
+                COALESCE(ws.ignore_groups, c.ignorar_grupos) as ignorar_grupos,
+                COALESCE(ws.ignore_status, c.ignorar_status) as ignorar_status
+            FROM configuracoes c
+            LEFT JOIN whatsapp_instances wi ON wi.instance_name = c.instancia
+            LEFT JOIN whatsapp_instance_settings ws ON ws.instance_id = wi.id
+            ORDER BY c.data_vencimento DESC LIMIT $1 OFFSET $2
+        `, [limit, offset]);
         return result.rows as TenantConfig[];
     }
 
     public static async getByInstance(instancia: string): Promise<TenantConfig | null> {
-        const result = await pool.query('SELECT * FROM configuracoes WHERE instancia = $1', [instancia]);
+        const result = await pool.query(`
+            SELECT 
+                c.*,
+                COALESCE(wi.status, c.status_conexao) as status_conexao,
+                COALESCE(ws.always_online, c.sempre_online) as sempre_online,
+                COALESCE(ws.reject_call, c.rejeitar_chamadas) as rejeitar_chamadas,
+                COALESCE(ws.read_messages, c.marcar_lidas) as marcar_lidas,
+                COALESCE(ws.ignore_groups, c.ignorar_grupos) as ignorar_grupos,
+                COALESCE(ws.ignore_status, c.ignorar_status) as ignorar_status
+            FROM configuracoes c
+            LEFT JOIN whatsapp_instances wi ON wi.instance_name = c.instancia
+            LEFT JOIN whatsapp_instance_settings ws ON ws.instance_id = wi.id
+            WHERE c.instancia = $1
+        `, [instancia]);
         return (result.rows[0] as TenantConfig) ?? null;
     }
 
@@ -108,9 +131,36 @@ export class ConfigRepository {
     }
 
     public static async getByToken(token: string): Promise<TenantConfig | null> {
-        let result = await pool.query('SELECT * FROM configuracoes WHERE connect_token = $1 OR instancia = $1', [token]);
+        let result = await pool.query(`
+            SELECT 
+                c.*,
+                COALESCE(wi.status, c.status_conexao) as status_conexao,
+                COALESCE(ws.always_online, c.sempre_online) as sempre_online,
+                COALESCE(ws.reject_call, c.rejeitar_chamadas) as rejeitar_chamadas,
+                COALESCE(ws.read_messages, c.marcar_lidas) as marcar_lidas,
+                COALESCE(ws.ignore_groups, c.ignorar_grupos) as ignorar_grupos,
+                COALESCE(ws.ignore_status, c.ignorar_status) as ignorar_status
+            FROM configuracoes c
+            LEFT JOIN whatsapp_instances wi ON wi.instance_name = c.instancia
+            LEFT JOIN whatsapp_instance_settings ws ON ws.instance_id = wi.id
+            WHERE c.connect_token = $1 OR c.instancia = $1
+        `, [token]);
+        
         if (result.rows.length === 0) {
-            result = await pool.query('SELECT * FROM configuracoes WHERE instancia = $1', [token]);
+            result = await pool.query(`
+                SELECT 
+                    c.*,
+                    COALESCE(wi.status, c.status_conexao) as status_conexao,
+                    COALESCE(ws.always_online, c.sempre_online) as sempre_online,
+                    COALESCE(ws.reject_call, c.rejeitar_chamadas) as rejeitar_chamadas,
+                    COALESCE(ws.read_messages, c.marcar_lidas) as marcar_lidas,
+                    COALESCE(ws.ignore_groups, c.ignorar_grupos) as ignorar_grupos,
+                    COALESCE(ws.ignore_status, c.ignorar_status) as ignorar_status
+                FROM configuracoes c
+                LEFT JOIN whatsapp_instances wi ON wi.instance_name = c.instancia
+                LEFT JOIN whatsapp_instance_settings ws ON ws.instance_id = wi.id
+                WHERE c.instancia = $1
+            `, [token]);
         }
         return result.rows[0] as TenantConfig || null;
     }
