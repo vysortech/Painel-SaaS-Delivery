@@ -83,6 +83,7 @@ export default function Clients() {
   
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const [deleteModal, setDeleteModal] = useState<string | null>(null);
+  const [createdLinkModal, setCreatedLinkModal] = useState<string | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error') => {
       setToast({ message, type });
@@ -151,9 +152,9 @@ export default function Clients() {
       } else {
         await api.put(`/config/${editingTenant?.instancia}`, payload);
       }
-      setActiveTab('lista');
-      setEditingTenant(null);
+      
       mutate();
+      setCreatedLinkModal(`${window.location.origin}/conectar/${formData.connect_token || formData.instancia}`);
       showToast('Cliente salvo com sucesso!', 'success');
     } catch {
       showToast('Erro ao salvar cliente.', 'error');
@@ -343,14 +344,6 @@ export default function Clients() {
                          <div>
                              <label className="flex items-center justify-between text-sm font-medium text-gray-300 mb-1">
                                  Nome do Canal (Instância) *
-                                 {formData.instancia && (
-                                     <button type="button" onClick={() => {
-                                         navigator.clipboard.writeText(`${window.location.origin}/conectar/${formData.connect_token || formData.instancia}`);
-                                         showToast('Link de conexão copiado!', 'success');
-                                     }} className="text-indigo-400 hover:text-indigo-300 text-xs flex items-center gap-1">
-                                         🔗 Copiar Link
-                                     </button>
-                                 )}
                              </label>
                              <input required disabled={!!editingTenant} type="text" 
                                 className="w-full bg-[#131316] border border-gray-800 rounded-lg p-3 text-gray-400 outline-none focus:border-[#0ea5e9]"
@@ -414,6 +407,11 @@ export default function Clients() {
                             </label>
                          </div>
                      </div>
+                     <div className="pt-4 flex justify-end">
+                        <button type="submit" className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(16,185,129,0.2)] transition-all">
+                           <Save className="w-4 h-4" /> Gravar Alterações
+                        </button>
+                     </div>
                  </div>
              </div>
 
@@ -456,6 +454,11 @@ export default function Clients() {
                             placeholder="Descreva aqui o contexto exclusivo desta loja..."
                             value={formData.contexto_loja || ''} onChange={e => setFormData({...formData, contexto_loja: e.target.value})}
                         />
+                    </div>
+                    <div className="pt-4 flex justify-end">
+                       <button type="submit" className="bg-purple-600 hover:bg-purple-500 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(168,85,247,0.2)] transition-all">
+                          <Save className="w-4 h-4" /> Gravar Alterações
+                       </button>
                     </div>
                  </div>
              </div>
@@ -554,9 +557,12 @@ export default function Clients() {
                        </div>
                     </div>
                     
-                    <div className="flex justify-end pt-6">
+                    <div className="flex justify-between items-center pt-6">
                        <button type="button" onClick={handleRenovarPagamento} className="bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/30 px-4 py-2.5 rounded-lg font-bold flex items-center gap-2 text-sm transition-colors">
                           <CreditCard className="w-4 h-4"/> Renovar +30 Dias Automático
+                       </button>
+                       <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 shadow-[0_0_15px_rgba(37,99,235,0.2)] transition-all">
+                          <Save className="w-4 h-4" /> Gravar Alterações
                        </button>
                     </div>
                  </div>
@@ -590,6 +596,50 @@ export default function Clients() {
                      Sim, Excluir!
                   </button>
                </div>
+            </div>
+         </div>
+      )}
+
+      {/* Link Created Modal */}
+      {createdLinkModal && (
+         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex justify-center items-center p-4 animate-in fade-in zoom-in-95 duration-300">
+            <div className="bg-[#111827] border border-emerald-500/30 w-full max-w-lg rounded-2xl shadow-2xl p-8 text-center relative overflow-hidden">
+               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-indigo-500"></div>
+               <div className="w-20 h-20 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(16,185,129,0.2)]">
+                  <MessageCircle className="w-10 h-10" />
+               </div>
+               <h3 className="text-2xl font-black text-white mb-2 tracking-tight">Cliente Salvo!</h3>
+               <p className="text-gray-400 text-sm mb-8">
+                  O cliente foi configurado e gravado no banco de dados com sucesso. O link de conexão já está ativo e pronto para uso.
+               </p>
+               
+               <div className="bg-[#18181b] border border-gray-700/50 rounded-xl p-4 mb-8 flex items-center justify-between gap-4">
+                  <div className="truncate text-left flex-1">
+                     <span className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1">Link de Conexão</span>
+                     <span className="text-indigo-400 font-mono text-sm truncate block">{createdLinkModal}</span>
+                  </div>
+                  <button 
+                     onClick={() => {
+                        navigator.clipboard.writeText(createdLinkModal);
+                        showToast('Link copiado com sucesso!', 'success');
+                     }} 
+                     className="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 p-3 rounded-lg transition-colors flex-shrink-0"
+                     title="Copiar Link"
+                  >
+                     <Save className="w-5 h-5" />
+                  </button>
+               </div>
+
+               <button 
+                  onClick={() => {
+                     setCreatedLinkModal(null);
+                     setActiveTab('lista');
+                     setEditingTenant(null);
+                  }} 
+                  className="w-full py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-lg shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all"
+               >
+                  Copiei, voltar para a lista
+               </button>
             </div>
          </div>
       )}
