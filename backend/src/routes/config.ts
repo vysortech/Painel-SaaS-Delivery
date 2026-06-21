@@ -39,6 +39,7 @@ router.post('/', async (req: Request, res: Response) => {
         
         // Sync advanced settings with Evolution Go
         if (tenant.instancia) {
+            await EvolutionService.createInstance(tenant.instancia);
             await EvolutionService.updateAdvancedSettings(tenant.instancia, {
                 alwaysOnline: tenant.sempre_online,
                 rejectCall: tenant.rejeitar_chamadas,

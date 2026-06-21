@@ -68,46 +68,56 @@ export class EvolutionService {
                 headers: { 'apikey': key }
             });
         } catch (err: any) {
-            if (err.response?.status === 404 || err.response?.status === 401 || err.response?.status === 403 || err.response?.status === 405) {
-                console.log("Detectado Evolution Go, conectando por rotas nativas...");
-                
-                try {
-                    // Tentar setar o webhook padrão do Evolution Go
-                    await axios.post(`${url}/webhook/set/${instancia}`, {
-                        webhook: {
-                            enabled: true,
-                            url: WEBHOOK_URL,
-                            webhookByEvents: false,
-                            webhookBase64: false,
-                            events: ["MESSAGES_UPSERT", "MESSAGES_UPDATE", "MESSAGES_DELETE", "SEND_MESSAGE", "CONNECTION_UPDATE", "CALL"]
-                        }
-                    }, { headers: { 'apikey': key } }).catch(() => {});
+            console.log(`Fallback ativado para instância ${instancia}. Motivo:`, err.response?.status || err.message);
+            
+            // 1. Tentar criar a instância (seja Evo API ou Evo Go, isso é seguro e pode falhar se já existir)
+            await this.createInstance(instancia).catch(() => {});
 
-                    // 1. Iniciar conexão (POST /instance/connect na Evo Go)
-                    await axios.post(`${url}/instance/connect`, {}, { 
+            // 2. Tentar setar o webhook padrão do Evolution Go
+            await axios.post(`${url}/webhook/set/${instancia}`, {
+                webhook: {
+                    enabled: true,
+                    url: WEBHOOK_URL,
+                    webhookByEvents: false,
+                    webhookBase64: false,
+                    events: ["MESSAGES_UPSERT", "MESSAGES_UPDATE", "MESSAGES_DELETE", "SEND_MESSAGE", "CONNECTION_UPDATE", "CALL"]
+                }
+            }, { headers: { 'apikey': key } }).catch(() => {});
+
+            // 3. Tentar conectar (Evo Go)
+            await axios.post(`${url}/instance/connect`, {}, { 
+                headers: { 'apikey': instancia } 
+            }).catch(() => {}); // ignore se já estiver conectando
+            
+            if (phone) {
+                // 4. Pedir Pairing Code (Evo Go)
+                try {
+                    const pairRes = await axios.post(`${url}/instance/pair`, { phone }, { 
                         headers: { 'apikey': instancia } 
-                    }).catch(() => {}); // ignore se já estiver conectando
-                    
-                    if (phone) {
-                        // 2. Pedir Pairing Code
-                        const pairRes = await axios.post(`${url}/instance/pair`, { phone }, { 
-                            headers: { 'apikey': instancia } 
-                        });
+                    });
+                    if (pairRes.data?.data?.PairingCode || pairRes.data?.PairingCode) {
                         return { pairingCode: pairRes.data?.data?.PairingCode || pairRes.data?.PairingCode };
-                    } else {
-                        // 3. Pegar QR Code
-                        const qrRes = await axios.get(`${url}/instance/qr`, { 
-                            headers: { 'apikey': instancia } 
-                        });
+                    }
+                } catch(e) {}
+            } else {
+                // 5. Pegar QR Code (Evo Go)
+                try {
+                    const qrRes = await axios.get(`${url}/instance/qr`, { 
+                        headers: { 'apikey': instancia } 
+                    });
+                    if (qrRes.data?.data?.Qrcode || qrRes.data?.Qrcode) {
                         return { base64: qrRes.data?.data?.Qrcode || qrRes.data?.Qrcode };
                     }
-                } catch(e: any) { 
-                    console.log('Aviso: Falha ao conectar no Evolution Go', e.response?.data || e.message); 
-                    throw e;
-                }
-            } else {
-                throw err;
+                } catch(e) {}
             }
+
+            // 6. Se nada deu certo (ex: era Evo API normal que só não existia), tenta conectar na rota padrao denovo
+            let urlStr = `${url}/instance/connect/${instancia}`;
+            if (phone) urlStr += `?phone=${phone}`;
+            
+            connectResponse = await axios.get(urlStr, {
+                headers: { 'apikey': key }
+            });
         }
 
         let finalData = connectResponse.data;
