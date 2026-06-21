@@ -12,7 +12,6 @@ import settingsRoutes from './infrastructure/http/routes/settings';
 import publicConnectRoutes from './infrastructure/http/routes/public_connect';
 import webhookRoutes from './infrastructure/http/routes/webhook';
 import { SocketServer } from './infrastructure/websocket/SocketServer';
-import './application/workers/EvolutionWorker';
 import { startBillingCron } from './infrastructure/cron/billing';
 import { logger } from './shared/logger';
 import { errorHandler } from './infrastructure/http/middlewares/errorHandler';
