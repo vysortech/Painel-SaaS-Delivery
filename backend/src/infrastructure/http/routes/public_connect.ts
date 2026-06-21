@@ -49,7 +49,9 @@ router.get('/qrcode/:token', async (req: Request, res: Response) => {
         }
         
         const instanceDb = await ConfigRepository.getByToken(token); // Or InstanceRepository
-        await EvolutionService.connectInstance(instancia).catch(() => {});
+        const connectRes = await EvolutionService.connectInstance(instancia).catch(() => null);
+        let base64 = connectRes?.base64 || connectRes?.qrcode?.base64 || connectRes?.instance?.qrcode;
+
         let pairingCode = null;
         if (phone) {
             pairingCode = await EvolutionService.getPairingCode(instancia, phone);
@@ -58,6 +60,7 @@ router.get('/qrcode/:token', async (req: Request, res: Response) => {
         res.json({ 
             connected: false, 
             status: 'CONNECTING',
+            base64,
             pairingCode,
             instanceName: instancia,
             nome_empresa: tenant.nome_empresa,

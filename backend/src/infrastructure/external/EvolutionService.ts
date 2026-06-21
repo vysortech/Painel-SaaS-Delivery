@@ -68,12 +68,13 @@ export class EvolutionService {
         }
     }
 
-    public static async connectInstance(instancia: string): Promise<void> {
+    public static async connectInstance(instancia: string): Promise<any> {
         const { url, key } = await this.getCredentials();
         try {
-            await evolutionApi.get(`${url}/instance/connect/${instancia}`, {
+            const res = await evolutionApi.get(`${url}/instance/connect/${instancia}`, {
                 headers: { 'apikey': key }
             });
+            return res.data;
         } catch (e: any) {
             logger.error({ err: e.response?.data || e.message, instancia }, "Evolution Connect Error");
             throw e;

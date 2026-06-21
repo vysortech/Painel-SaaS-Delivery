@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Power, Settings, Trash2, Bot, Clock, Link as LinkIcon, ExternalLink } from 'lucide-react';
+import { Plus, Search, Power, Settings, Trash2, Bot, Clock } from 'lucide-react';
 import type { TenantConfig } from '../../types';
 
 interface ClientListProps {
@@ -106,20 +106,24 @@ export const ClientList: React.FC<ClientListProps> = ({
                         </td>
                         <td className="p-4 text-right">
                           <div className="flex items-center justify-end gap-2 transition-opacity">
+                            <div className="flex items-center gap-1">
                             {tenant.status_conexao === 'CONNECTED' ? (
                                 <button onClick={() => onDisconnect(tenant.instancia)} title="Desconectar WhatsApp" className="px-3 py-1.5 text-xs text-orange-400 hover:bg-orange-500/20 rounded font-semibold border border-orange-500/30 flex items-center gap-1 transition-all">
                                     <Power className="w-3 h-3"/> Desconectar
                                 </button>
                             ) : (
-                                <div className="flex items-center gap-1">
-                                    <button onClick={() => onConnect(tenant)} title="Copiar Link para o Cliente" className="px-3 py-1.5 text-xs text-blue-400 hover:bg-blue-500/20 rounded font-semibold border border-blue-500/30 flex items-center gap-1 transition-all">
-                                        <LinkIcon className="w-3 h-3"/> Copiar Link
-                                    </button>
-                                    <button onClick={() => window.open(`/conectar/${tenant.connect_token}`, '_blank')} title="Abrir Conexão" className="px-2 py-1.5 text-xs text-emerald-400 hover:bg-emerald-500/20 rounded font-semibold border border-emerald-500/30 flex items-center transition-all">
-                                        <ExternalLink className="w-3 h-3"/>
-                                    </button>
-                                </div>
+                                <button onClick={() => onConnect(tenant)} title="Conectar WhatsApp (Abrir Modal Admin)" className="px-3 py-1.5 text-xs text-emerald-400 hover:bg-emerald-500/20 rounded font-semibold border border-emerald-500/30 flex items-center gap-1 transition-all">
+                                    <Plus className="w-3 h-3"/> Conectar
+                                </button>
                             )}
+                                <button onClick={() => {
+                                    const url = `${window.location.origin}/conectar/${tenant.connect_token}`;
+                                    navigator.clipboard.writeText(url);
+                                    alert('Link copiado para a área de transferência!');
+                                }} title="Copiar Link para o Cliente" className="px-3 py-1.5 text-xs text-blue-400 hover:bg-blue-500/20 rounded font-semibold border border-blue-500/30 flex items-center gap-1 transition-all">
+                                    <Bot className="w-3 h-3"/> Copiar Link
+                                </button>
+                            </div>
                             <button onClick={() => onToggleStatus(tenant)} title={tenant.status_assinatura === 'ativo' ? 'Bloquear' : 'Desbloquear'} 
                               className={`p-2 rounded ${tenant.status_assinatura === 'ativo' ? 'text-red-400 hover:bg-red-500/20' : 'text-emerald-400 hover:bg-emerald-500/20'}`}>
                               <Power className="w-4 h-4" />
