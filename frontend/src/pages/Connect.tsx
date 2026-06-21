@@ -113,8 +113,8 @@ export default function Connect() {
                     {status === 'connected' && (
                         <div className="flex flex-col items-center text-[#10b981] text-center">
                             <CheckCircle2 className="w-20 h-20 mb-4 animate-bounce" />
-                            <h2 className="font-black text-2xl mb-2">Conectado com sucesso!</h2>
-                            <p className="text-gray-600 font-medium text-sm">Parabéns, você já pode fechar esta tela e usar o SaaS Delivery!</p>
+                            <h2 className="font-black text-2xl mb-2">Parabéns, WhatsApp conectado com sucesso!</h2>
+                            <p className="text-gray-400 font-medium text-base">Bem-vindo ao SaaS Delivery</p>
                         </div>
                     )}
 

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useClients } from '../hooks/useClients';
 import { ClientList } from '../components/clients/ClientList';
 import { ClientForm } from '../components/clients/ClientForm';
-import { ConnectionScreen } from '../components/whatsapp/ConnectionScreen';
 import { Toast, type ToastMessage } from '../components/common/Toast';
 import type { TenantConfig } from '../types';
 import { Trash2 } from 'lucide-react';
@@ -16,7 +15,6 @@ export default function Clients() {
   
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [deleteModal, setDeleteModal] = useState<string | null>(null);
-  const [connectingTenant, setConnectingTenant] = useState<TenantConfig | null>(null);
 
   useEffect(() => {
     if (!socket) return;
@@ -90,7 +88,9 @@ export default function Clients() {
   };
 
   const handleConnect = (tenant: TenantConfig) => {
-      setConnectingTenant(tenant);
+      const url = `${window.location.origin}/conectar/${tenant.connect_token}`;
+      navigator.clipboard.writeText(url);
+      showToast('Link de conexão copiado para o cliente!', 'success');
   };
 
   return (
@@ -137,13 +137,7 @@ export default function Clients() {
          </div>
       )}
 
-      {connectingTenant && (
-          <ConnectionScreen 
-              tenantId={connectingTenant.instancia} // Simulação: usando instancia como ID
-              instanceName={connectingTenant.instancia}
-              onClose={() => setConnectingTenant(null)}
-          />
-      )}
+
 
       {toast && <Toast toast={toast} onClose={() => setToast(null)} />}
     </div>
