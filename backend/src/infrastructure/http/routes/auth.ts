@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { UserRepository } from '../repositories/UserRepository';
+import { UserRepository } from '../../database/repositories/UserRepository';
 import { authMiddleware } from '../middlewares/authMiddleware';
 
 const router = Router();

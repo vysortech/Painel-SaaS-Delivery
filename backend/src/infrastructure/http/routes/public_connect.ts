@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
 import axios from 'axios';
-import { ConfigRepository } from '../repositories/ConfigRepository';
-import { GlobalSettingsRepository } from '../repositories/GlobalSettingsRepository';
-import { EvolutionService } from '../services/EvolutionService';
+import { ConfigRepository } from '../../database/repositories/ConfigRepository';
+import { GlobalSettingsRepository } from '../../database/repositories/GlobalSettingsRepository';
+import { EvolutionService } from '../../external/EvolutionService';
 
 const router = Router();
 

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { GlobalSettingsRepository } from '../repositories/GlobalSettingsRepository';
+import { GlobalSettingsRepository } from '../database/repositories/GlobalSettingsRepository';
 
 export class EvolutionService {
     private static async getCredentials() {

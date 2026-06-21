@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { ConfigRepository } from '../repositories/ConfigRepository';
-import { TenantConfig } from '../interfaces/Config';
+import { ConfigRepository } from '../../database/repositories/ConfigRepository';
+import { TenantConfig } from '../../../domain/entities/Config';
 import crypto from 'crypto';
-import { EvolutionService } from '../services/EvolutionService';
+import { EvolutionService } from '../../external/EvolutionService';
 import { authMiddleware } from '../middlewares/authMiddleware';
 
 const router = Router();
@@ -15,7 +15,10 @@ router.use(authMiddleware);
 // Get all tenants
 router.get('/', async (req: Request, res: Response) => {
     try {
-        const tenants = await ConfigRepository.getAll();
+        const limit = parseInt(req.query.limit as string) || 100;
+        const offset = parseInt(req.query.offset as string) || 0;
+        const tenants = await ConfigRepository.getAll(limit, offset);
+
         
         // Auto-generate tokens for legacy instances
         for (const tenant of tenants) {

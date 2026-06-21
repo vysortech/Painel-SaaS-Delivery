@@ -1,4 +1,4 @@
-import pool from '../db';
+import pool from '../database';
 
 export interface Alert {
     id: number;

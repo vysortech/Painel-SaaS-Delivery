@@ -1,5 +1,5 @@
-import pool from '../db';
-import { User } from '../interfaces/User';
+import pool from '../database';
+import { User } from '../../../domain/entities/User';
 import bcrypt from 'bcryptjs';
 
 export class UserRepository {

@@ -1,7 +1,7 @@
 import cron from 'node-cron';
-import pool from '../db';
+import pool from '../database/database';
 import axios from 'axios';
-import { GlobalSettingsRepository } from '../repositories/GlobalSettingsRepository';
+import { GlobalSettingsRepository } from '../database/repositories/GlobalSettingsRepository';
 
 export function startBillingCron() {
     // Roda todo dia às 08:00 da manhã

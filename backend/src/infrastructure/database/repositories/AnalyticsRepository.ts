@@ -1,4 +1,4 @@
-import pool from '../db';
+import pool from '../database';
 
 export class AnalyticsRepository {
     public static async getMRR(): Promise<any[]> {

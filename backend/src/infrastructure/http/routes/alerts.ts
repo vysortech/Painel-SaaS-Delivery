@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { AlertRepository } from '../repositories/AlertRepository';
+import { AlertRepository } from '../../database/repositories/AlertRepository';
 import { authMiddleware } from '../middlewares/authMiddleware';
 
 const router = Router();

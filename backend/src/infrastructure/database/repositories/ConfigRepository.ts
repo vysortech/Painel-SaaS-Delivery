@@ -1,5 +1,5 @@
-import pool from '../db';
-import { TenantConfig } from '../interfaces/Config';
+import pool from '../database';
+import { TenantConfig } from '../../../domain/entities/Config';
 import crypto from 'crypto';
 
 export class ConfigRepository {
@@ -37,8 +37,11 @@ export class ConfigRepository {
         await pool.query(`ALTER TABLE configuracoes ALTER COLUMN valor DROP NOT NULL;`).catch(() => {});
     }
 
-    public static async getAll(): Promise<TenantConfig[]> {
-        const result = await pool.query('SELECT * FROM configuracoes ORDER BY instancia ASC');
+    public static async getAll(limit: number = 100, offset: number = 0): Promise<TenantConfig[]> {
+        const result = await pool.query(
+            'SELECT * FROM configuracoes ORDER BY data_vencimento DESC LIMIT $1 OFFSET $2',
+            [limit, offset]
+        );
         return result.rows as TenantConfig[];
     }
 

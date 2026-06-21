@@ -1,5 +1,5 @@
-import pool from '../db';
-import { GlobalSettings } from '../interfaces/GlobalSettings';
+import pool from '../database';
+import { GlobalSettings } from '../../../domain/entities/GlobalSettings';
 
 export class GlobalSettingsRepository {
     public static async initTable(): Promise<void> {

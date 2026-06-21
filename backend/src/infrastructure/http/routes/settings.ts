@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { GlobalSettingsRepository } from '../repositories/GlobalSettingsRepository';
+import { GlobalSettingsRepository } from '../../database/repositories/GlobalSettingsRepository';
 import { authMiddleware } from '../middlewares/authMiddleware';
 
 const router = Router();

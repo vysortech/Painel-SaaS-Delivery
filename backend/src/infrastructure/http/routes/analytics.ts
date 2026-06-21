@@ -1,5 +1,5 @@
-import { Router, Request, Response } from 'express';
-import { AnalyticsRepository } from '../repositories/AnalyticsRepository';
+import { Router, Response } from 'express';
+import { AnalyticsRepository } from '../../database/repositories/AnalyticsRepository';
 import { authMiddleware, AuthRequest } from '../middlewares/authMiddleware';
 
 const router = Router();

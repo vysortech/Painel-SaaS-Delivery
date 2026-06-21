@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { EvolutionService } from '../services/EvolutionService';
+import { EvolutionService } from '../../external/EvolutionService';
 import { authMiddleware } from '../middlewares/authMiddleware';
 
 const router = Router();
