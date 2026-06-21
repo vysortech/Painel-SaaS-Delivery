@@ -70,7 +70,8 @@ export class EvolutionService {
 
     public static async connectInstance(instancia: string, phone?: string): Promise<any> {
         const { url, key } = await this.getCredentials();
-        const WEBHOOK_URL = process.env.WEBHOOK_URL || 'http://localhost:4000/api/whatsapp/webhooks';
+        const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
+        const WEBHOOK_URL = `${backendUrl}/api/whatsapp/webhooks`;
         
         let isEvoGo = false;
         let evoGoState = '';
@@ -108,6 +109,7 @@ export class EvolutionService {
                             enabled: true,
                             url: WEBHOOK_URL,
                             webhookByEvents: false,
+                            webhookBase64: true,
                             events: ["QRCODE_UPDATED", "MESSAGES_UPSERT", "CONNECTION_UPDATE"]
                         }
                     }, { headers: { 'apikey': key } }).catch(() => {});
@@ -125,11 +127,13 @@ export class EvolutionService {
             let result: any = { base64: null, pairingCode: null, status: evoGoState.toUpperCase() };
             
             try {
-                const qrRes = await evolutionApi.get(`${url}/instance/qr`, { 
+                const qrRes = await evolutionApi.get(`${url}/instance/qr?instance=${instancia}`, { 
                     headers: { 'apikey': instancia } 
                 });
-                result.base64 = qrRes.data?.data?.Qrcode || qrRes.data?.Qrcode || qrRes.data?.base64 || null;
-            } catch(e) {}
+                result.base64 = qrRes.data?.data?.Qrcode || qrRes.data?.Qrcode || qrRes.data?.base64 || qrRes.data?.qrcode || null;
+            } catch(e: any) {
+                logger.error({ err: e.response?.data || e.message, instancia }, "Evolution Go QR Error");
+            }
 
             return result;
         }
