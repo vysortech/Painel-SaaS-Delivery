@@ -16,17 +16,33 @@ import './application/workers/EvolutionWorker';
 import { startBillingCron } from './infrastructure/cron/billing';
 import { logger } from './shared/logger';
 import { errorHandler } from './infrastructure/http/middlewares/errorHandler';
-import pool from './infrastructure/database/database';
+import pool, { initDatabase } from './infrastructure/database/database';
 import path from 'path';
 import fs from 'fs';
 
 dotenv.config();
 
+// Inicializa banco de dados (tabelas e defaults)
+initDatabase().catch(err => {
+    logger.fatal({ err }, 'Falha fatal ao inicializar o banco de dados');
+    process.exit(1);
+});
+
 const app = express();
 const PORT = process.env.PORT || 4000;
 
 // Security Middleware
-app.use(helmet());
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            connectSrc: ["'self'", "ws:", "wss:", "*"], 
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", "data:", "blob:", "https:"]
+        }
+    }
+}));
 app.use(cors({
     origin: process.env.FRONTEND_URL || 'https://food.vysortech.app.br',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
