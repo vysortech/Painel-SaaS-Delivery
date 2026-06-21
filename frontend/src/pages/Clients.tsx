@@ -160,14 +160,18 @@ export default function Clients() {
         botoes_tempo: botoesTempo.join(',')
       };
 
+      let connectTokenToUse = formData.connect_token || formData.instancia;
       if (!editingTenant) {
-        await api.post('/config', payload);
+        const res = await api.post('/config', payload);
+        if (res.data?.connect_token) {
+            connectTokenToUse = res.data.connect_token;
+        }
       } else {
         await api.put(`/config/${editingTenant?.instancia}`, payload);
       }
       
       mutate();
-      setCreatedLinkModal(`${window.location.origin}/conectar/${formData.connect_token || formData.instancia}`);
+      setCreatedLinkModal(`${window.location.origin}/conectar/${connectTokenToUse}`);
       showToast('Cliente salvo com sucesso!', 'success');
     } catch {
       showToast('Erro ao salvar cliente.', 'error');

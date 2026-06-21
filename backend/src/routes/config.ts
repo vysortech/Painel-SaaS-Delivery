@@ -49,7 +49,7 @@ router.post('/', async (req: Request, res: Response) => {
             });
         }
 
-        res.status(201).json({ message: 'Tenant criado com sucesso' });
+        res.status(201).json({ message: 'Tenant criado com sucesso', connect_token: connectToken });
     } catch (err: any) {
         console.error('ERRO INSERT:', err.message);
         res.status(500).json({ error: 'Erro ao criar empresa', details: err.message });
