@@ -41,8 +41,8 @@ export class EvolutionService {
         const { url, key } = await this.getCredentials();
         try {
             // O webhook DEVE apontar para o nosso próprio backend que irá processar os eventos
-            // via webhook.ts e EvolutionWorker.ts, onde está a lógica do socket.io e filas.
-            const baseUrl = process.env.BACKEND_URL || process.env.FRONTEND_URL || 'http://localhost:4000';
+            // Usamos a URL pública do painel por padrão para evitar que a Evolution Go rejeite "localhost"
+            const baseUrl = process.env.BACKEND_URL || process.env.FRONTEND_URL || 'https://food.vysortech.app.br';
             const WEBHOOK_URL = `${baseUrl}/api/whatsapp/webhooks`;
 
             await evolutionApi.post(`${url}/instance/create`, {
@@ -65,8 +65,13 @@ export class EvolutionService {
                 headers: this.headers(key)
             });
         } catch (e: any) {
-            logger.error({ err: e.response?.data || e.message, instancia }, "Evolution Create Error");
-            // Não faz throw — se a instância já existe, continuamos normalmente
+            const errData = e.response?.data;
+            logger.error({ err: errData || e.message, instancia }, "Evolution Create Error");
+            
+            // Se o erro não for "instância já existe" (geralmente 403 ou algo com a mensagem), nós jogamos o erro pra frente
+            if (errData && errData.message && !errData.message.includes('already exists')) {
+                throw new Error(`Falha ao criar instância no Evolution Go: ${JSON.stringify(errData)}`);
+            }
         }
     }
 

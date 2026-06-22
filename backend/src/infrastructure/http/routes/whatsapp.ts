@@ -54,7 +54,7 @@ router.post('/instances/:instanceName/connect', async (req: Request, res: Respon
         });
     } catch (err: any) {
         logger.error({ err }, 'Erro ao conectar instância');
-        res.status(500).json({ error: 'Erro ao iniciar conexão' });
+        res.status(500).json({ error: 'Erro ao iniciar conexão', detail: err.message });
     }
 });
 
