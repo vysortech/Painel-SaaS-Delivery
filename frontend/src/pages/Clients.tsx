@@ -54,8 +54,9 @@ export default function Clients() {
           showToast('Cliente salvo com sucesso!', 'success');
           setActiveTab('lista');
           if (token) setLinkModalToken(token);
-      } catch (e) {
-          showToast('Erro ao salvar cliente.', 'error');
+      } catch (e: any) {
+          const errMsg = e.response?.data?.details || e.response?.data?.error || 'Erro ao salvar cliente.';
+          showToast(errMsg, 'error');
       }
   };
 

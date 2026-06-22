@@ -142,13 +142,14 @@ export class EvolutionService {
                 { headers: this.buildHeaders(globalApiKey) } // Rota administrativa exige AuthAdmin
             );
         } catch (error: any) {
-            const errData = error.response?.data as EvolutionApiResponse;
-            const message = errData?.message || errData?.error || '';
+            const errData = error.response?.data;
+            const message = errData?.message || errData?.error || error.message || '';
             
             // Se a instância já existir, prosseguimos silenciosamente.
-            if (!message.includes('already exists')) {
+            if (typeof message === 'string' && !message.includes('already exists')) {
                 logger.error({ err: errData || error.message, instanceName }, "Evolution-Go Create Error");
-                throw new Error(`Falha ao criar instância: ${JSON.stringify(errData)}`);
+                const detail = errData ? JSON.stringify(errData) : error.message;
+                throw new Error(`Falha ao criar instância Evolution-Go: ${detail}`);
             }
         }
     }
