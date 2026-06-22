@@ -3,12 +3,10 @@ import axiosRetry from 'axios-retry';
 import { GlobalSettingsRepository } from '../database/repositories/GlobalSettingsRepository';
 import { logger } from '../../shared/logger';
 
-// Instância dedicada para Evolution com Timeout de 15s
 const evolutionApi = axios.create({
     timeout: 15000, 
 });
 
-// Configura 3 retentativas com Exponential Backoff
 axiosRetry(evolutionApi, {
     retries: 3,
     retryDelay: axiosRetry.exponentialDelay,
@@ -21,7 +19,6 @@ axiosRetry(evolutionApi, {
 });
 
 export class EvolutionService {
-    // ─── Autenticação (Seção 0) ───────────────────────────────────────
     private static async getCredentials() {
         const settings = await GlobalSettingsRepository.get().catch(() => null);
         const url = settings?.evolution_api_url || process.env.EVOLUTION_API_URL;
@@ -32,160 +29,159 @@ export class EvolutionService {
         return { url, key };
     }
 
-    private static headers(key: string) {
-        return { 'apikey': key, 'Content-Type': 'application/json' };
+    private static headers(key: string, instance?: string) {
+        const h: any = { 'apikey': key, 'Content-Type': 'application/json' };
+        if (instance) {
+            h['instance'] = instance; // Golang API usa header 'instance' em vez de query param na maioria das rotas
+        }
+        return h;
     }
 
-    // ─── 1. Criar Instância (POST /instance/create) ──────────────────
+    // ─── 1. Criar Instância (Golang API: POST /instance/create) ─────────
     public static async createInstance(instancia: string): Promise<void> {
         const { url, key } = await this.getCredentials();
         try {
-            // O webhook DEVE apontar para o nosso próprio backend que irá processar os eventos
-            // Usamos a URL pública do painel por padrão para evitar que a Evolution Go rejeite "localhost"
-            const baseUrl = process.env.BACKEND_URL || process.env.FRONTEND_URL || 'https://food.vysortech.app.br';
-            const WEBHOOK_URL = `${baseUrl}/api/whatsapp/webhooks`;
-
+            // Em Evolution-Go (Golang), o payload de criação é muito mais limpo
+            // e os Webhooks são configurados na hora do /connect.
             await evolutionApi.post(`${url}/instance/create`, {
-                instanceName: instancia,
+                name: instancia,
+                instanceId: instancia,
                 token: instancia,
-                qrcode: true,
-                b64: true,
-                integration: "WHATSAPP-BAILEYS",
-                webhook: WEBHOOK_URL,
-                webhook_by_events: false,
-                webhook_base64: false,
-                events: [
-                    "MESSAGES_UPSERT",
-                    "CONNECTION_UPDATE",
-                    "SEND_MESSAGE",
-                    "MESSAGES_UPDATE"
-                ]
             }, {
                 headers: this.headers(key)
             });
         } catch (e: any) {
             const errData = e.response?.data;
-            logger.error({ err: errData || e.message, instancia }, "Evolution Create Error");
-            
-            // Se o erro não for "instância já existe" (geralmente 403 ou algo com a mensagem), nós jogamos o erro pra frente
+            logger.error({ err: errData || e.message, instancia }, "Evolution-Go Create Error");
             if (errData && errData.message && !errData.message.includes('already exists')) {
-                throw new Error(`Falha ao criar instância no Evolution Go: ${JSON.stringify(errData)}`);
+                throw new Error(`Falha ao criar instância: ${JSON.stringify(errData)}`);
             }
         }
     }
 
-    // ─── 2. Configurações da Instância (POST /settings/set/:instanceName) ─
+    // ─── 2. Configurações da Instância (POST /instance/{id}/advanced-settings) ─
     public static async updateAdvancedSettings(instancia: string, settings: any): Promise<void> {
         const { url, key } = await this.getCredentials();
         try {
             const payload = {
                 rejectCall: settings.rejectCall ?? true,
-                msgCall: settings.msgCall ?? "Neste canal não aceitamos ligações. Por favor, envie uma mensagem de texto.",
+                msgRejectCall: settings.msgCall ?? "Neste canal não aceitamos ligações. Por favor, envie uma mensagem de texto.",
                 ignoreGroups: settings.ignoreGroups ?? false,
                 alwaysOnline: settings.alwaysOnline ?? false,
                 readMessages: settings.readMessages ?? false,
-                readStatus: settings.readStatus ?? settings.ignoreStatus ?? false,
-                syncFullHistory: settings.syncFullHistory ?? false
+                ignoreStatus: settings.readStatus ?? settings.ignoreStatus ?? false,
             };
 
-            await evolutionApi.post(`${url}/settings/set/${instancia}`, payload, {
+            await evolutionApi.post(`${url}/instance/${instancia}/advanced-settings`, payload, {
                 headers: this.headers(key)
             });
         } catch (e: any) {
-            logger.error({ err: e.response?.data || e.message, instancia }, "Evolution Update Settings Error");
+            logger.error({ err: e.response?.data || e.message, instancia }, "Evolution-Go Update Settings Error");
         }
     }
 
-    // ─── 3. Conectar / Gerar QR Code ou Pairing Code ─────────────────
-    // GET /instance/connect/:instanceName
-    // Com número: GET /instance/connect/:instanceName?number=5511999999999
+    // ─── 3. Conectar / Gerar QR Code (Golang API: POST /instance/connect) ──
     public static async connectInstance(instancia: string, phone?: string): Promise<any> {
         const { url, key } = await this.getCredentials();
-        
-        let urlStr = `${url}/instance/connect/${instancia}`;
-        if (phone) urlStr += `?number=${phone}`;
+        const baseUrl = process.env.BACKEND_URL || process.env.FRONTEND_URL || 'https://food.vysortech.app.br';
+        const WEBHOOK_URL = `${baseUrl}/api/whatsapp/webhooks`;
         
         try {
-            const connectResponse = await evolutionApi.get(urlStr, {
-                headers: { 'apikey': key }
+            // No Evolution-Go, é no POST /connect que enviamos o Webhook!
+            const connectResponse = await evolutionApi.post(`${url}/instance/connect`, {
+                webhookUrl: WEBHOOK_URL,
+                phone: phone || undefined,
+                subscribe: [
+                    "MESSAGE",
+                    "CONNECTION_UPDATE",
+                    "MESSAGES_UPDATE"
+                ] // Tenta passar eventos compatíveis com a v2/Go. Se falhar, passaremos vazio.
+            }, {
+                headers: this.headers(key, instancia)
             });
 
             const data = connectResponse?.data || {};
             
+            // Em Go, o QR code geralmente vem na mesma resposta ou precisa buscar em /instance/qr
+            let base64 = data.base64 || data.qrcode || null;
+            const code = data.pairingCode || data.code || null;
+
+            // Se não veio base64 no connect, e também não veio pairingCode, tenta buscar o QR em /instance/qr
+            if (!base64 && !code) {
+                try {
+                    const qrRes = await evolutionApi.get(`${url}/instance/qr`, { headers: this.headers(key, instancia) });
+                    base64 = qrRes.data?.base64 || qrRes.data?.qrcode || null;
+                } catch(e) {
+                    logger.warn({ instancia }, "Falha ao buscar QR em /instance/qr");
+                }
+            }
+
             return {
-                instance: data.instance || instancia,
-                base64: data.base64 || null,        // QR Code em base64 (Seção 3.2)
-                code: data.code || null,             // Pairing Code de 8 chars (Seção 3.1)
-                pairingCode: data.code || null,      // Alias para compatibilidade
-                count: data.count || null             // Contador de tentativas de QR
+                instance: instancia,
+                base64,
+                code,
+                pairingCode: code,
             };
         } catch(err: any) {
             const status = err.response?.status;
             const detail = err.response?.data || err.message;
 
-            // Seção 7 — Tratamento de erros
             if (status === 403) {
-                logger.warn({ instancia }, "Instância já está conectada (403 Forbidden)");
+                logger.warn({ instancia }, "Instância já está conectada (403)");
                 return { instance: instancia, base64: null, code: null, alreadyConnected: true };
             }
-            if (status === 404) {
-                logger.warn({ instancia }, "Instância não encontrada (404). Talvez tenha sido deletada.");
-            }
-
-            logger.error({ status, detail, instancia }, "ERRO na conexão Evolution Go");
-            return { base64: null, code: null, error: "Falha ao conectar na instância. Verifique os logs." };
+            logger.error({ status, detail, instancia }, "ERRO na conexão Evolution-Go");
+            return { base64: null, code: null, error: `Falha ao conectar: ${JSON.stringify(detail)}` };
         }
     }
 
-    // ─── 4. Consulta do Estado da Conexão (Polling) ──────────────────
-    // GET /instance/connectionState/:instanceName
+    // ─── 4. Consulta do Estado da Conexão (GET /instance/status) ───────
     public static async getConnectionState(instancia: string): Promise<string> {
         const { url, key } = await this.getCredentials();
         try {
-            const res = await evolutionApi.get(`${url}/instance/connectionState/${instancia}`, {
-                headers: { 'apikey': key }
+            const res = await evolutionApi.get(`${url}/instance/status`, {
+                headers: this.headers(key, instancia)
             });
-            // Retorna: "open", "connecting", "close"
+            // Evolution-Go status pode retornar state: "open", "close", "connecting"
             return res.data?.state || 'close';
         } catch (e: any) {
-            logger.error({ err: e.response?.data || e.message, instancia }, "Evolution ConnectionState Error");
             return 'close';
         }
     }
 
-    // ─── 6.1 Logout (DELETE /instance/logout/:instanceName) ──────────
+    // ─── 6.1 Logout (DELETE /instance/logout) ──────────
     public static async logoutInstance(instancia: string): Promise<void> {
         const { url, key } = await this.getCredentials();
         try {
-            await evolutionApi.delete(`${url}/instance/logout/${instancia}`, {
-                headers: { 'apikey': key }
+            await evolutionApi.delete(`${url}/instance/logout`, {
+                headers: this.headers(key, instancia)
             });
         } catch (e: any) {
-            logger.error({ err: e.response?.data || e.message, instancia }, "Evolution Logout Error");
+            logger.error({ err: e.response?.data || e.message, instancia }, "Evolution-Go Logout Error");
         }
     }
 
-    // ─── 6.2 Deletar Instância (DELETE /instance/delete/:instanceName) ─
+    // ─── 6.2 Deletar Instância (DELETE /instance/delete/{instanceId}) ─
     public static async deleteInstance(instancia: string): Promise<void> {
         const { url, key } = await this.getCredentials();
         try {
             await evolutionApi.delete(`${url}/instance/delete/${instancia}`, {
-                headers: { 'apikey': key }
+                headers: this.headers(key)
             });
         } catch (e: any) {
-            logger.error({ err: e.response?.data || e.message, instancia }, "Evolution Delete Error");
+            logger.error({ err: e.response?.data || e.message, instancia }, "Evolution-Go Delete Error");
         }
     }
 
-    // ─── 6.3 Restart Instância (PUT /instance/restart/:instanceName) ─
+    // ─── 6.3 Restart Instância (PUT /instance/forcereconnect/{instanceId}) ─
     public static async restartInstance(instancia: string): Promise<void> {
         const { url, key } = await this.getCredentials();
         try {
-            await evolutionApi.put(`${url}/instance/restart/${instancia}`, {}, {
-                headers: { 'apikey': key }
+            await evolutionApi.put(`${url}/instance/forcereconnect/${instancia}`, {}, {
+                headers: this.headers(key)
             });
         } catch (e: any) {
-            logger.error({ err: e.response?.data || e.message, instancia }, "Evolution Restart Error");
+            logger.error({ err: e.response?.data || e.message, instancia }, "Evolution-Go Restart Error");
         }
     }
 }
