@@ -1,16 +1,55 @@
-import axios from 'axios';
+import axios, { AxiosInstance, AxiosError } from 'axios';
 import axiosRetry from 'axios-retry';
 import { GlobalSettingsRepository } from '../database/repositories/GlobalSettingsRepository';
 import { logger } from '../../shared/logger';
 
-const evolutionApi = axios.create({
+// ==========================================
+// Tipagens e Interfaces (Evolution Go)
+// ==========================================
+
+export interface EvolutionCredentials {
+    url: string;
+    globalApiKey: string;
+}
+
+export interface InstanceAdvancedSettings {
+    rejectCall?: boolean;
+    msgCall?: string;
+    ignoreGroups?: boolean;
+    alwaysOnline?: boolean;
+    readMessages?: boolean;
+    readStatus?: boolean;
+    ignoreStatus?: boolean;
+}
+
+export interface ConnectInstanceResponse {
+    instance: string;
+    base64: string | null;
+    code: string | null;
+    pairingCode: string | null;
+    error?: string;
+    alreadyConnected?: boolean;
+}
+
+// Representa a resposta padrão do Golang com o envelope `{ message, data }`
+export interface EvolutionApiResponse<T = any> {
+    message?: string;
+    error?: string;
+    data?: T;
+}
+
+// ==========================================
+// Configuração do Cliente HTTP
+// ==========================================
+
+const evolutionApi: AxiosInstance = axios.create({
     timeout: 15000, 
 });
 
 axiosRetry(evolutionApi, {
     retries: 3,
     retryDelay: axiosRetry.exponentialDelay,
-    retryCondition: (error) => {
+    retryCondition: (error: AxiosError) => {
         return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.code === 'ECONNABORTED';
     },
     onRetry: (retryCount, error, requestConfig) => {
@@ -18,56 +57,108 @@ axiosRetry(evolutionApi, {
     }
 });
 
+// ==========================================
+// Evolution Service
+// ==========================================
+
 export class EvolutionService {
-    private static async getCredentials() {
+    
+    /**
+     * Recupera as credenciais globais do banco de dados (Global API Key e URL).
+     */
+    private static async getCredentials(): Promise<EvolutionCredentials> {
         const settings = await GlobalSettingsRepository.get().catch(() => null);
         const url = settings?.evolution_api_url || process.env.EVOLUTION_API_URL;
-        const key = settings?.evolution_api_key || process.env.EVOLUTION_API_KEY;
-        if (!url || !key) {
-            throw new Error('Evolution API URL ou API Key não configurados.');
+        const globalApiKey = settings?.evolution_api_key || process.env.EVOLUTION_API_KEY;
+
+        if (!url || !globalApiKey) {
+            throw new Error('Evolution API URL ou API Key não configurados no painel ou .env.');
         }
-        return { url, key };
+
+        return { url, globalApiKey };
     }
 
-    private static headers(token: string, instanceId?: string) {
-        const h: any = { 
+    /**
+     * Gera os cabeçalhos padrão para a Evolution API.
+     * @param token O token de autorização (Global API Key para AuthAdmin, ou Instance Token para Auth normal).
+     * @param instanceId (Opcional) Nome da instância a ser trafegado no header `instance`.
+     */
+    private static buildHeaders(token: string, instanceId?: string): Record<string, string> {
+        const headers: Record<string, string> = { 
             'apikey': token, 
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json' 
         };
-        // O Golang API em alguns endpoints precisa do header 'instance'
+        // A API Golang em alguns endpoints utiliza o header `instance` para autorização estendida
         if (instanceId) {
-            h['instance'] = instanceId;
+            headers['instance'] = instanceId;
         }
-        return h;
+        return headers;
     }
 
-    // ─── 1. Criar Instância (Golang API: POST /instance/create) ─────────
-    public static async createInstance(instancia: string): Promise<void> {
-        const { url, key } = await this.getCredentials();
+    /**
+     * Extrai de forma segura o objeto de dados de uma resposta que pode estar envelopada (padrão Go: { message, data: {...} }).
+     */
+    private static extractData<T>(responseData: any): T | null {
+        if (!responseData) return null;
+        if (responseData.data !== undefined) return responseData.data as T;
+        return responseData as T;
+    }
+
+    /**
+     * (AuthAdmin) Busca as informações da instância para recuperar o Instance Token real, garantindo 
+     * a autorização correta em endpoints que não aceitam a Global API Key.
+     */
+    public static async getInstanceToken(instanceName: string): Promise<string> {
+        const { url, globalApiKey } = await this.getCredentials();
         try {
-            // Em Evolution-Go (Golang), o payload de criação é muito mais limpo
-            // e os Webhooks são configurados na hora do /connect.
-            await evolutionApi.post(`${url}/instance/create`, {
-                name: instancia,
-                instanceId: instancia,
-                token: instancia,
-            }, {
-                headers: this.headers(key)
-            });
-        } catch (e: any) {
-            const errData = e.response?.data;
-            logger.error({ err: errData || e.message, instancia }, "Evolution-Go Create Error");
-            if (errData && errData.message && !errData.message.includes('already exists')) {
+            const response = await evolutionApi.get<EvolutionApiResponse>(
+                `${url}/instance/info/${instanceName}`,
+                { headers: this.buildHeaders(globalApiKey) }
+            );
+            const instanceData = this.extractData<any>(response.data);
+            if (!instanceData || !instanceData.token) {
+                throw new Error('Instância localizada, mas sem token válido.');
+            }
+            return instanceData.token;
+        } catch (error: any) {
+            const status = error.response?.status;
+            logger.error({ status, err: error.response?.data || error.message, instanceName }, "Falha ao buscar Instance Token.");
+            throw new Error(`Falha ao recuperar token da instância ${instanceName}. Instância não existe ou Global API Key incorreta.`);
+        }
+    }
+
+    // ─── 1. Criar Instância (POST /instance/create) ─────────
+    public static async createInstance(instanceName: string): Promise<void> {
+        const { url, globalApiKey } = await this.getCredentials();
+        try {
+            await evolutionApi.post<EvolutionApiResponse>(
+                `${url}/instance/create`, 
+                {
+                    name: instanceName,
+                    instanceId: instanceName,
+                    token: instanceName, // Definimos o token inicialmente como o nome da instância
+                }, 
+                { headers: this.buildHeaders(globalApiKey) } // Rota administrativa exige AuthAdmin
+            );
+        } catch (error: any) {
+            const errData = error.response?.data as EvolutionApiResponse;
+            const message = errData?.message || errData?.error || '';
+            
+            // Se a instância já existir, prosseguimos silenciosamente.
+            if (!message.includes('already exists')) {
+                logger.error({ err: errData || error.message, instanceName }, "Evolution-Go Create Error");
                 throw new Error(`Falha ao criar instância: ${JSON.stringify(errData)}`);
             }
         }
     }
 
-    // ─── 2. Configurações da Instância (POST /instance/{id}/advanced-settings) ─
-    public static async updateAdvancedSettings(instancia: string, settings: any): Promise<void> {
-        const { url, key } = await this.getCredentials();
+    // ─── 2. Configurações da Instância (PUT /instance/{id}/advanced-settings) ─
+    public static async updateAdvancedSettings(instanceName: string, settings: InstanceAdvancedSettings): Promise<void> {
+        const { url } = await this.getCredentials();
         try {
+            const instanceToken = await this.getInstanceToken(instanceName);
+            
             const payload = {
                 rejectCall: settings.rejectCall ?? true,
                 msgRejectCall: settings.msgCall ?? "Neste canal não aceitamos ligações. Por favor, envie uma mensagem de texto.",
@@ -77,120 +168,130 @@ export class EvolutionService {
                 ignoreStatus: settings.readStatus ?? settings.ignoreStatus ?? false,
             };
 
-            // PUT request, e Evolution-Go usa o Token da Instancia (neste caso setado como o proprio nome da instancia)
-            await evolutionApi.put(`${url}/instance/${instancia}/advanced-settings`, payload, {
-                headers: this.headers(instancia) // Auth normal requer token da instancia
-            });
-        } catch (e: any) {
-            logger.error({ err: e.response?.data || e.message, instancia }, "Evolution-Go Update Settings Error");
+            await evolutionApi.put<EvolutionApiResponse>(
+                `${url}/instance/${instanceName}/advanced-settings`, 
+                payload, 
+                { headers: this.buildHeaders(instanceToken) } // Requer Auth normal (Token da Instância)
+            );
+        } catch (error: any) {
+            logger.error({ err: error.response?.data || error.message, instanceName }, "Evolution-Go Update Settings Error");
         }
     }
 
-    // ─── 3. Conectar / Gerar QR Code (Golang API: POST /instance/connect) ──
-    public static async connectInstance(instancia: string, phone?: string): Promise<any> {
-        const { url, key } = await this.getCredentials();
+    // ─── 3. Conectar / Gerar QR Code (POST /instance/connect) ──
+    public static async connectInstance(instanceName: string, phone?: string): Promise<ConnectInstanceResponse> {
+        const { url } = await this.getCredentials();
         const baseUrl = process.env.BACKEND_URL || process.env.FRONTEND_URL || 'https://food.vysortech.app.br';
-        const WEBHOOK_URL = `${baseUrl}/api/whatsapp/webhooks`;
+        const webhookUrl = `${baseUrl}/api/whatsapp/webhooks`;
         
         try {
-            // No Evolution-Go, é no POST /connect que enviamos o Webhook!
-            const connectResponse = await evolutionApi.post(`${url}/instance/connect`, {
-                webhookUrl: WEBHOOK_URL,
-                phone: phone || undefined,
-                subscribe: [
-                    "MESSAGE",
-                    "CONNECTION_UPDATE",
-                    "MESSAGES_UPDATE"
-                ] // Tenta passar eventos compatíveis com a v2/Go. Se falhar, passaremos vazio.
-            }, {
-                headers: this.headers(instancia, instancia) // Usa o token da instancia para autorizar
-            });
+            // Buscamos o token dinamicamente. Essencial para instâncias legadas onde token !== instanceName
+            const instanceToken = await this.getInstanceToken(instanceName);
 
-            const rawData = connectResponse?.data || {};
-            const data = rawData.data || rawData; // Evolution-Go envelopa a resposta em .data
+            const connectResponse = await evolutionApi.post<EvolutionApiResponse>(
+                `${url}/instance/connect`, 
+                {
+                    webhookUrl,
+                    phone: phone || undefined,
+                    subscribe: ["MESSAGE", "CONNECTION_UPDATE", "MESSAGES_UPDATE"]
+                }, 
+                { headers: this.buildHeaders(instanceToken, instanceName) }
+            );
+
+            const connectData = this.extractData<any>(connectResponse.data) || {};
             
-            // Em Go, o QR code geralmente vem na mesma resposta ou precisa buscar em /instance/qr
-            let base64 = data.base64 || data.qrcode || null;
-            const code = data.pairingCode || data.code || null;
+            // O endpoint /connect na Go API nem sempre retorna o base64 (geralmente apenas jid e webhook)
+            let base64: string | null = connectData.base64 || connectData.qrcode || null;
+            const code: string | null = connectData.pairingCode || connectData.code || null;
 
-            // Se não veio base64 no connect, e também não veio pairingCode, tenta buscar o QR em /instance/qr
+            // Se o connect não retornou o código de pareamento/QR, buscamos explicitamente em /instance/qr
             if (!base64 && !code) {
                 try {
-                    const qrRes = await evolutionApi.get(`${url}/instance/qr`, { headers: this.headers(instancia, instancia) });
-                    const qrData = qrRes.data?.data || qrRes.data || {};
+                    const qrRes = await evolutionApi.get<EvolutionApiResponse>(
+                        `${url}/instance/qr`, 
+                        { headers: this.buildHeaders(instanceToken, instanceName) }
+                    );
+                    const qrData = this.extractData<any>(qrRes.data) || {};
                     base64 = qrData.base64 || qrData.qrcode || null;
                 } catch(e) {
-                    logger.warn({ instancia }, "Falha ao buscar QR em /instance/qr");
+                    logger.warn({ instanceName }, "Falha ao buscar QR Code suplementar na rota GET /instance/qr");
                 }
             }
 
             return {
-                instance: instancia,
+                instance: instanceName,
                 base64,
                 code,
                 pairingCode: code,
             };
-        } catch(err: any) {
-            const status = err.response?.status;
-            const detail = err.response?.data || err.message;
+        } catch(error: any) {
+            const status = error.response?.status;
+            const detail = error.response?.data || error.message;
 
             if (status === 403) {
-                logger.warn({ instancia }, "Instância já está conectada (403)");
-                return { instance: instancia, base64: null, code: null, alreadyConnected: true };
+                logger.warn({ instanceName }, "Instância já encontra-se conectada (Status 403)");
+                return { instance: instanceName, base64: null, code: null, pairingCode: null, alreadyConnected: true };
             }
-            logger.error({ status, detail, instancia }, "ERRO na conexão Evolution-Go");
-            return { base64: null, code: null, error: `Falha ao conectar: ${JSON.stringify(detail)}` };
+            logger.error({ status, detail, instanceName }, "ERRO na operação de conexão com a Evolution-Go");
+            return { instance: instanceName, base64: null, code: null, pairingCode: null, error: `Falha ao conectar: ${JSON.stringify(detail)}` };
         }
     }
 
     // ─── 4. Consulta do Estado da Conexão (GET /instance/status) ───────
-    public static async getConnectionState(instancia: string): Promise<string> {
-        const { url, key } = await this.getCredentials();
+    public static async getConnectionState(instanceName: string): Promise<string> {
+        const { url } = await this.getCredentials();
         try {
-            const res = await evolutionApi.get(`${url}/instance/status`, {
-                headers: this.headers(instancia, instancia) // Usa o token da instancia
-            });
-            const statusData = res.data?.data || res.data || {};
-            // Evolution-Go status pode retornar state: "open", "close", "connecting"
+            const instanceToken = await this.getInstanceToken(instanceName);
+            const res = await evolutionApi.get<EvolutionApiResponse>(
+                `${url}/instance/status`, 
+                { headers: this.buildHeaders(instanceToken, instanceName) }
+            );
+            const statusData = this.extractData<any>(res.data) || {};
+            // Status mapeados comuns: 'open', 'close', 'connecting'
             return statusData.state || 'close';
-        } catch (e: any) {
+        } catch (error: any) {
             return 'close';
         }
     }
 
-    // ─── 6.1 Logout (DELETE /instance/logout) ──────────
-    public static async logoutInstance(instancia: string): Promise<void> {
-        const { url, key } = await this.getCredentials();
+    // ─── 5. Logout (DELETE /instance/logout) ──────────
+    public static async logoutInstance(instanceName: string): Promise<void> {
+        const { url } = await this.getCredentials();
         try {
-            await evolutionApi.delete(`${url}/instance/logout`, {
-                headers: this.headers(instancia, instancia) // Usa o token da instancia
-            });
-        } catch (e: any) {
-            logger.error({ err: e.response?.data || e.message, instancia }, "Evolution-Go Logout Error");
+            const instanceToken = await this.getInstanceToken(instanceName);
+            await evolutionApi.delete<EvolutionApiResponse>(
+                `${url}/instance/logout`, 
+                { headers: this.buildHeaders(instanceToken, instanceName) }
+            );
+        } catch (error: any) {
+            logger.error({ err: error.response?.data || error.message, instanceName }, "Evolution-Go Logout Error");
         }
     }
 
-    // ─── 6.2 Deletar Instância (DELETE /instance/delete/{instanceId}) ─
-    public static async deleteInstance(instancia: string): Promise<void> {
-        const { url, key } = await this.getCredentials();
+    // ─── 6. Deletar Instância (DELETE /instance/delete/{instanceId}) ─
+    public static async deleteInstance(instanceName: string): Promise<void> {
+        const { url, globalApiKey } = await this.getCredentials();
         try {
-            await evolutionApi.delete(`${url}/instance/delete/${instancia}`, {
-                headers: this.headers(key)
-            });
-        } catch (e: any) {
-            logger.error({ err: e.response?.data || e.message, instancia }, "Evolution-Go Delete Error");
+            await evolutionApi.delete<EvolutionApiResponse>(
+                `${url}/instance/delete/${instanceName}`, 
+                { headers: this.buildHeaders(globalApiKey) } // Operação destrutiva requer AuthAdmin
+            );
+        } catch (error: any) {
+            logger.error({ err: error.response?.data || error.message, instanceName }, "Evolution-Go Delete Error");
         }
     }
 
-    // ─── 6.3 Restart Instância (PUT /instance/forcereconnect/{instanceId}) ─
-    public static async restartInstance(instancia: string): Promise<void> {
-        const { url, key } = await this.getCredentials();
+    // ─── 7. Restart Instância (POST /instance/forcereconnect/{instanceId}) ─
+    public static async restartInstance(instanceName: string): Promise<void> {
+        const { url, globalApiKey } = await this.getCredentials();
         try {
-            await evolutionApi.post(`${url}/instance/forcereconnect/${instancia}`, { number: "" }, {
-                headers: this.headers(key) // Usa Global API Key (AuthAdmin)
-            });
-        } catch (e: any) {
-            logger.error({ err: e.response?.data || e.message, instancia }, "Evolution-Go Restart Error");
+            await evolutionApi.post<EvolutionApiResponse>(
+                `${url}/instance/forcereconnect/${instanceName}`, 
+                { number: "" }, 
+                { headers: this.buildHeaders(globalApiKey) } // Rota AuthAdmin
+            );
+        } catch (error: any) {
+            logger.error({ err: error.response?.data || error.message, instanceName }, "Evolution-Go Restart Error");
         }
     }
 }
