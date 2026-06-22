@@ -118,10 +118,17 @@ export class EvolutionService {
     public static async getInstanceToken(instanceName: string): Promise<string> {
         const { url, globalApiKey } = await this.getCredentials();
         try {
-            const response = await evolutionApi.get<EvolutionApiResponse>(
-                `${url}/instance/info/${instanceName}`,
+            // Tenta o endpoint padrao da V1/V2
+            let response = await evolutionApi.get<EvolutionApiResponse>(
+                `${url}/instance/get/${instanceName}`,
                 { headers: this.buildHeaders(globalApiKey) }
-            );
+            ).catch(async (e) => {
+                // Fallback para a V1 legada caso o get falhe
+                return evolutionApi.get<EvolutionApiResponse>(
+                    `${url}/instance/info/${instanceName}`,
+                    { headers: this.buildHeaders(globalApiKey) }
+                );
+            });
             const instanceData = this.extractData<any>(response.data);
             if (!instanceData || !instanceData.token) {
                 throw new Error('Instância localizada, mas sem token válido.');
