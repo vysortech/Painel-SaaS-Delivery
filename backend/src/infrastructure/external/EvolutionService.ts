@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import axiosRetry from 'axios-retry';
+import crypto from 'crypto';
 import { GlobalSettingsRepository } from '../database/repositories/GlobalSettingsRepository';
 import { logger } from '../../shared/logger';
 
@@ -142,7 +143,7 @@ export class EvolutionService {
                 {
                     instanceName: instanceName,
                     name: instanceName,
-                    instanceId: instanceName,
+                    instanceId: crypto.randomUUID(),
                     token: instanceName,
                 }, 
                 { headers: this.buildHeaders(globalApiKey) } // Rota administrativa exige AuthAdmin
