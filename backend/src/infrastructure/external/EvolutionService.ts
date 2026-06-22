@@ -115,29 +115,30 @@ export class EvolutionService {
      * (AuthAdmin) Busca as informações da instância para recuperar o Instance Token real, garantindo 
      * a autorização correta em endpoints que não aceitam a Global API Key.
      */
-    public static async getInstanceToken(instanceName: string): Promise<string> {
+    public static async getInstanceDetails(instanceName: string): Promise<{ token: string, uuid: string }> {
         const { url, globalApiKey } = await this.getCredentials();
         try {
-            // Tenta o endpoint padrao da V1/V2
-            let response = await evolutionApi.get<EvolutionApiResponse>(
-                `${url}/instance/get/${instanceName}`,
+            // No Evolution Go, precisamos do UUID para acessar certas rotas (ex: advanced-settings).
+            // Como /instance/get/{name} não funciona no Go, buscamos a lista e filtramos.
+            const response = await evolutionApi.get<any>(
+                `${url}/instance/all`,
                 { headers: this.buildHeaders(globalApiKey) }
-            ).catch(async (e) => {
-                // Fallback para a V1 legada caso o get falhe
-                return evolutionApi.get<EvolutionApiResponse>(
-                    `${url}/instance/info/${instanceName}`,
-                    { headers: this.buildHeaders(globalApiKey) }
-                );
-            });
-            const instanceData = this.extractData<any>(response.data);
-            if (!instanceData || !instanceData.token) {
-                throw new Error('Instância localizada, mas sem token válido.');
+            );
+            
+            const instances = response.data?.data || response.data || [];
+            if (!Array.isArray(instances)) {
+                throw new Error('Resposta de instâncias inválida');
             }
-            return instanceData.token;
+
+            const instanceData = instances.find((i: any) => i.name === instanceName || i.instanceName === instanceName);
+            if (!instanceData || !instanceData.token) {
+                throw new Error('Instância não encontrada na lista ou sem token válido.');
+            }
+            return { token: instanceData.token, uuid: instanceData.id || instanceData.instanceId };
         } catch (error: any) {
             const status = error.response?.status;
-            logger.error({ status, err: error.response?.data || error.message, instanceName }, "Falha ao buscar Instance Token.");
-            throw new Error(`Falha ao recuperar token da instância ${instanceName}. Instância não existe ou Global API Key incorreta.`);
+            logger.error({ status, err: error.response?.data || error.message, instanceName }, "Falha ao buscar Instance Details.");
+            throw new Error(`Falha ao recuperar token/uuid da instância ${instanceName}.`);
         }
     }
 
@@ -172,7 +173,7 @@ export class EvolutionService {
     public static async updateAdvancedSettings(instanceName: string, settings: InstanceAdvancedSettings): Promise<void> {
         const { url } = await this.getCredentials();
         try {
-            const instanceToken = await this.getInstanceToken(instanceName);
+            const { token: instanceToken, uuid: instanceId } = await this.getInstanceDetails(instanceName);
             
             const payload = {
                 rejectCall: settings.rejectCall ?? true,
@@ -184,9 +185,9 @@ export class EvolutionService {
             };
 
             await evolutionApi.put<EvolutionApiResponse>(
-                `${url}/instance/${instanceName}/advanced-settings`, 
+                `${url}/instance/${instanceId}/advanced-settings`, 
                 payload, 
-                { headers: this.buildHeaders(instanceToken) } // Requer Auth normal (Token da Instância)
+                { headers: { apikey: instanceToken } } // Go exige UUID na rota e apikey com o token da instancia
             );
         } catch (error: any) {
             logger.error({ err: error.response?.data || error.message, instanceName }, "Evolution-Go Update Settings Error");
@@ -201,7 +202,7 @@ export class EvolutionService {
         
         try {
             // Buscamos o token dinamicamente. Essencial para instâncias legadas onde token !== instanceName
-            const instanceToken = await this.getInstanceToken(instanceName);
+            const { token: instanceToken } = await this.getInstanceDetails(instanceName);
 
             const connectResponse = await evolutionApi.post<EvolutionApiResponse>(
                 `${url}/instance/connect`, 
@@ -256,7 +257,7 @@ export class EvolutionService {
     public static async getConnectionState(instanceName: string): Promise<string> {
         const { url } = await this.getCredentials();
         try {
-            const instanceToken = await this.getInstanceToken(instanceName);
+            const { token: instanceToken } = await this.getInstanceDetails(instanceName);
             const res = await evolutionApi.get<EvolutionApiResponse>(
                 `${url}/instance/status`, 
                 { headers: this.buildHeaders(instanceToken, instanceName) }
@@ -273,7 +274,9 @@ export class EvolutionService {
     public static async logoutInstance(instanceName: string): Promise<void> {
         const { url } = await this.getCredentials();
         try {
-            const instanceToken = await this.getInstanceToken(instanceName);
+            const { token: instanceToken, uuid: instanceId } = await this.getInstanceDetails(instanceName);
+            
+            // Tenta deletar usando a rota do Go (com UUID)
             await evolutionApi.delete<EvolutionApiResponse>(
                 `${url}/instance/logout`, 
                 { headers: this.buildHeaders(instanceToken, instanceName) }
