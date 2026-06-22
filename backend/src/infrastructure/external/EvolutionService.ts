@@ -29,14 +29,15 @@ export class EvolutionService {
         return { url, key };
     }
 
-    private static headers(key: string, instance?: string) {
+    private static headers(token: string, instanceId?: string) {
         const h: any = { 
-            'apikey': key, 
-            'Authorization': `Bearer ${key}`,
+            'apikey': token, 
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json' 
         };
-        if (instance) {
-            h['instance'] = instance; // Golang API usa header 'instance' em vez de query param na maioria das rotas
+        // O Golang API em alguns endpoints precisa do header 'instance'
+        if (instanceId) {
+            h['instance'] = instanceId;
         }
         return h;
     }
@@ -76,8 +77,9 @@ export class EvolutionService {
                 ignoreStatus: settings.readStatus ?? settings.ignoreStatus ?? false,
             };
 
-            await evolutionApi.post(`${url}/instance/${instancia}/advanced-settings`, payload, {
-                headers: this.headers(key)
+            // PUT request, e Evolution-Go usa o Token da Instancia (neste caso setado como o proprio nome da instancia)
+            await evolutionApi.put(`${url}/instance/${instancia}/advanced-settings`, payload, {
+                headers: this.headers(instancia) // Auth normal requer token da instancia
             });
         } catch (e: any) {
             logger.error({ err: e.response?.data || e.message, instancia }, "Evolution-Go Update Settings Error");
@@ -101,7 +103,7 @@ export class EvolutionService {
                     "MESSAGES_UPDATE"
                 ] // Tenta passar eventos compatíveis com a v2/Go. Se falhar, passaremos vazio.
             }, {
-                headers: this.headers(key, instancia)
+                headers: this.headers(instancia, instancia) // Usa o token da instancia para autorizar
             });
 
             const data = connectResponse?.data || {};
@@ -113,7 +115,7 @@ export class EvolutionService {
             // Se não veio base64 no connect, e também não veio pairingCode, tenta buscar o QR em /instance/qr
             if (!base64 && !code) {
                 try {
-                    const qrRes = await evolutionApi.get(`${url}/instance/qr`, { headers: this.headers(key, instancia) });
+                    const qrRes = await evolutionApi.get(`${url}/instance/qr`, { headers: this.headers(instancia, instancia) });
                     base64 = qrRes.data?.base64 || qrRes.data?.qrcode || null;
                 } catch(e) {
                     logger.warn({ instancia }, "Falha ao buscar QR em /instance/qr");
@@ -144,7 +146,7 @@ export class EvolutionService {
         const { url, key } = await this.getCredentials();
         try {
             const res = await evolutionApi.get(`${url}/instance/status`, {
-                headers: this.headers(key, instancia)
+                headers: this.headers(instancia, instancia) // Usa o token da instancia
             });
             // Evolution-Go status pode retornar state: "open", "close", "connecting"
             return res.data?.state || 'close';
@@ -158,7 +160,7 @@ export class EvolutionService {
         const { url, key } = await this.getCredentials();
         try {
             await evolutionApi.delete(`${url}/instance/logout`, {
-                headers: this.headers(key, instancia)
+                headers: this.headers(instancia, instancia) // Usa o token da instancia
             });
         } catch (e: any) {
             logger.error({ err: e.response?.data || e.message, instancia }, "Evolution-Go Logout Error");
@@ -181,8 +183,8 @@ export class EvolutionService {
     public static async restartInstance(instancia: string): Promise<void> {
         const { url, key } = await this.getCredentials();
         try {
-            await evolutionApi.put(`${url}/instance/forcereconnect/${instancia}`, {}, {
-                headers: this.headers(key)
+            await evolutionApi.post(`${url}/instance/forcereconnect/${instancia}`, { number: "" }, {
+                headers: this.headers(key) // Usa Global API Key (AuthAdmin)
             });
         } catch (e: any) {
             logger.error({ err: e.response?.data || e.message, instancia }, "Evolution-Go Restart Error");
