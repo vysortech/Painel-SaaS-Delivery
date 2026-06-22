@@ -30,7 +30,11 @@ export class EvolutionService {
     }
 
     private static headers(key: string, instance?: string) {
-        const h: any = { 'apikey': key, 'Content-Type': 'application/json' };
+        const h: any = { 
+            'apikey': key, 
+            'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json' 
+        };
         if (instance) {
             h['instance'] = instance; // Golang API usa header 'instance' em vez de query param na maioria das rotas
         }
