@@ -106,7 +106,8 @@ export class EvolutionService {
                 headers: this.headers(instancia, instancia) // Usa o token da instancia para autorizar
             });
 
-            const data = connectResponse?.data || {};
+            const rawData = connectResponse?.data || {};
+            const data = rawData.data || rawData; // Evolution-Go envelopa a resposta em .data
             
             // Em Go, o QR code geralmente vem na mesma resposta ou precisa buscar em /instance/qr
             let base64 = data.base64 || data.qrcode || null;
@@ -116,7 +117,8 @@ export class EvolutionService {
             if (!base64 && !code) {
                 try {
                     const qrRes = await evolutionApi.get(`${url}/instance/qr`, { headers: this.headers(instancia, instancia) });
-                    base64 = qrRes.data?.base64 || qrRes.data?.qrcode || null;
+                    const qrData = qrRes.data?.data || qrRes.data || {};
+                    base64 = qrData.base64 || qrData.qrcode || null;
                 } catch(e) {
                     logger.warn({ instancia }, "Falha ao buscar QR em /instance/qr");
                 }
@@ -148,8 +150,9 @@ export class EvolutionService {
             const res = await evolutionApi.get(`${url}/instance/status`, {
                 headers: this.headers(instancia, instancia) // Usa o token da instancia
             });
+            const statusData = res.data?.data || res.data || {};
             // Evolution-Go status pode retornar state: "open", "close", "connecting"
-            return res.data?.state || 'close';
+            return statusData.state || 'close';
         } catch (e: any) {
             return 'close';
         }
