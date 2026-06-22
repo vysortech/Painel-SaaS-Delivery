@@ -68,11 +68,16 @@ export class EvolutionService {
      */
     private static async getCredentials(): Promise<EvolutionCredentials> {
         const settings = await GlobalSettingsRepository.get().catch(() => null);
-        const url = settings?.evolution_api_url || process.env.EVOLUTION_API_URL;
+        let url = settings?.evolution_api_url || process.env.EVOLUTION_API_URL;
         const globalApiKey = settings?.evolution_api_key || process.env.EVOLUTION_API_KEY;
 
         if (!url || !globalApiKey) {
             throw new Error('Evolution API URL ou API Key não configurados no painel ou .env.');
+        }
+
+        // Remove trailing slash if present
+        if (url.endsWith('/')) {
+            url = url.slice(0, -1);
         }
 
         return { url, globalApiKey };
