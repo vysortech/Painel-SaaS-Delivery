@@ -135,9 +135,10 @@ export class EvolutionService {
             await evolutionApi.post<EvolutionApiResponse>(
                 `${url}/instance/create`, 
                 {
+                    instanceName: instanceName,
                     name: instanceName,
                     instanceId: instanceName,
-                    token: instanceName, // Definimos o token inicialmente como o nome da instância
+                    token: instanceName,
                 }, 
                 { headers: this.buildHeaders(globalApiKey) } // Rota administrativa exige AuthAdmin
             );
