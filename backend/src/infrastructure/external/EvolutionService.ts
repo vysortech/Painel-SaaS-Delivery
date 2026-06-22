@@ -58,8 +58,7 @@ export class EvolutionService {
                     "MESSAGES_UPSERT",
                     "CONNECTION_UPDATE",
                     "SEND_MESSAGE",
-                    "MESSAGES_UPDATE",
-                    "QRCODE_UPDATED"
+                    "MESSAGES_UPDATE"
                 ]
             }, {
                 headers: this.headers(key)
