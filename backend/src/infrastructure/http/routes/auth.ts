@@ -17,10 +17,18 @@ if (!JWT_SECRET) {
 // Auto-migrate tables
 UserRepository.initTable().catch(console.error);
 
+import rateLimit from 'express-rate-limit';
+
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 10, // limite de 10 tentativas por IP
+    message: { error: 'Muitas tentativas de login. Tente novamente mais tarde.' }
+});
+
 // --- PUBLIC ROUTES ---
 
 // Login
-router.post('/login', validate(loginSchema), async (req: Request, res: Response) => {
+router.post('/login', loginLimiter, validate(loginSchema), async (req: Request, res: Response) => {
     const { username, password } = req.body;
     try {
         const user = await UserRepository.getByUsername(username);

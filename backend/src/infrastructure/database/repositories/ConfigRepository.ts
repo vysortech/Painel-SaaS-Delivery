@@ -113,10 +113,10 @@ export class ConfigRepository {
                 sempre_online = $17, rejeitar_chamadas = $18, marcar_lidas = $19, ignorar_grupos = $20, ignorar_status = $21
             WHERE instancia = $22
         `, [
-            tenant.nome_empresa, tenant.nome_admin, tenant.telefone_admin, tenant.telefone_whatsapp, tenant.chave_pix, tenant.nome_pix, 
-            tenant.modelo_ia_cliente || '', tenant.modelo_ia_admin || '', tenant.nome_atendente, tenant.botoes_tempo,
-            tenant.valor_assinatura, tenant.data_vencimento || null, tenant.status_assinatura, tenant.plano_tipo, 
-            tenant.contexto_loja, tenant.dias_carencia, 
+            tenant.nome_empresa ?? null, tenant.nome_admin ?? null, tenant.telefone_admin ?? null, tenant.telefone_whatsapp ?? null, tenant.chave_pix ?? null, tenant.nome_pix ?? null, 
+            tenant.modelo_ia_cliente || '', tenant.modelo_ia_admin || '', tenant.nome_atendente ?? null, tenant.botoes_tempo ?? null,
+            tenant.valor_assinatura ?? 0, tenant.data_vencimento || null, tenant.status_assinatura ?? 'ativo', tenant.plano_tipo ?? 'recorrente', 
+            tenant.contexto_loja ?? '', tenant.dias_carencia ?? 0, 
             tenant.sempre_online || false, tenant.rejeitar_chamadas || false, tenant.marcar_lidas || false, 
             tenant.ignorar_grupos || false, tenant.ignorar_status || false,
             instancia
@@ -127,6 +127,13 @@ export class ConfigRepository {
         await pool.query(
             'UPDATE configuracoes SET status_conexao = $1 WHERE connect_token = $2 OR instancia = $2',
             [status, token]
+        );
+    }
+
+    public static async updateConnectionStatus(instancia: string, status: string): Promise<void> {
+        await pool.query(
+            'UPDATE configuracoes SET status_conexao = $1 WHERE instancia = $2',
+            [status, instancia]
         );
     }
 

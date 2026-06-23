@@ -32,17 +32,35 @@ router.post('/instances/:instanceName/connect', async (req: Request, res: Respon
             await EvolutionService.createInstance(instanceName);
         }
 
-        const connectResult = await EvolutionService.connectInstance(instanceName);
+        let phone = req.query.phone as string | undefined || req.body.phone as string | undefined || instance?.phone;
+        if (!phone) {
+            const { ConfigRepository } = await import('../../database/repositories/ConfigRepository');
+            const tenantConfig = await ConfigRepository.getByInstance(instanceName);
+            if (tenantConfig?.telefone_whatsapp) {
+                phone = tenantConfig.telefone_whatsapp;
+            } else if (tenantConfig?.telefone_admin) {
+                phone = tenantConfig.telefone_admin.split(',')[0];
+            }
+        }
+        
+        if (phone) {
+            let p = phone.replace(/\D/g, '');
+            if (p.length === 10 || p.length === 11) p = '55' + p;
+            phone = p;
+        }
+
+        const connectResult = await EvolutionService.connectInstance(instanceName, phone || undefined);
         
         // Se a Evolution Go retornou o QR Code direto na resposta, emite via Socket.io imediatamente
         const qrBase64 = connectResult?.base64 || null;
         const pairingCode = connectResult?.pairingCode || connectResult?.code || null;
 
-        if (qrBase64) {
+        if (qrBase64 || pairingCode) {
             const { SocketServer } = await import('../../websocket/SocketServer');
             SocketServer.emitToTenant(tenantId, 'qrcode.updated', {
                 instance: instanceName,
-                base64: qrBase64
+                base64: qrBase64,
+                pairingCode
             });
         }
 
@@ -50,7 +68,8 @@ router.post('/instances/:instanceName/connect', async (req: Request, res: Respon
             success: true, 
             base64: qrBase64,
             pairingCode,
-            message: qrBase64 ? 'QR Code gerado com sucesso.' : 'Processo de conexão iniciado. Aguarde o QR Code via websocket.' 
+            phone,
+            message: (qrBase64 || pairingCode) ? 'Código gerado com sucesso.' : 'Processo de conexão iniciado. Aguarde o código via websocket.' 
         });
     } catch (err: any) {
         logger.error({ err }, 'Erro ao conectar instância');

@@ -162,11 +162,11 @@ export default function Clients() {
                
                <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 flex items-center justify-between mb-6">
                   <span className="text-gray-300 text-sm truncate mr-2 select-all">
-                     {`${window.location.origin}/conectar/${linkModalToken}`}
+                     {`${window.location.origin}/conectar/${linkModalToken}?phone=${editingTenant?.telefone_whatsapp || ''}`}
                   </span>
                   <button 
                      onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}/conectar/${linkModalToken}`);
+                        navigator.clipboard.writeText(`${window.location.origin}/conectar/${linkModalToken}?phone=${editingTenant?.telefone_whatsapp || ''}`);
                         showToast('Link copiado!', 'success');
                      }}
                      className="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-md transition-colors flex-shrink-0"

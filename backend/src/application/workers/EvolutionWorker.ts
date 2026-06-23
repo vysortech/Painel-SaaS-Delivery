@@ -31,9 +31,15 @@ export const evolutionWorker = new Worker('evolution-webhooks', async job => {
         }
         else if (event === 'QRCODE_UPDATED') {
             const qrBase64 = data.qrcode?.base64 || data.base64;
+            let pairingCode = data.qrcode?.pairingCode || data.pairingCode || null;
+            if (!pairingCode) {
+                const c = data.qrcode?.code || data.code;
+                if (c && c.length <= 15) pairingCode = c;
+            }
             SocketServer.emitToTenant(tenantId, 'qrcode.updated', {
                 instance,
-                base64: qrBase64
+                base64: qrBase64,
+                pairingCode: pairingCode
             });
         }
         else if (event === 'MESSAGES_UPSERT') {

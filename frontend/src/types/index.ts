@@ -3,6 +3,7 @@ export interface TenantConfig {
     nome_empresa: string;
     nome_admin: string;
     telefone_admin: string;
+    telefone_whatsapp?: string;
     chave_pix: string;
     nome_pix: string;
     modelo_ia_cliente: string;

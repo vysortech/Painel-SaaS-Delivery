@@ -12,6 +12,7 @@ interface ConnectionScreenProps {
 export const ConnectionScreen: React.FC<ConnectionScreenProps> = ({ tenantId, instanceName, onClose }) => {
     const { socket, isConnected } = useSocket(tenantId);
     const [qrCode, setQrCode] = useState<string | null>(null);
+    const [pairingCode, setPairingCode] = useState<string | null>(null);
     const [status, setStatus] = useState<'PENDING' | 'CONNECTING' | 'CONNECTED' | 'ERROR'>('PENDING');
 
     useEffect(() => {
@@ -24,15 +25,20 @@ export const ConnectionScreen: React.FC<ConnectionScreenProps> = ({ tenantId, in
                 setQrCode(res.data.base64);
                 setStatus('CONNECTING');
             }
+            if (res.data?.pairingCode) {
+                setPairingCode(res.data.pairingCode);
+                setStatus('CONNECTING');
+            }
         }).catch(err => {
             console.error(err);
             setStatus('ERROR');
         });
 
         if (socket) {
-            socket.on('qrcode.updated', (data: { instance: string, base64: string }) => {
+            socket.on('qrcode.updated', (data: { instance: string, base64: string, pairingCode?: string }) => {
                 if (data.instance === instanceName) {
-                    setQrCode(data.base64);
+                    if (data.base64) setQrCode(data.base64);
+                    if (data.pairingCode) setPairingCode(data.pairingCode);
                     setStatus('CONNECTING');
                 }
             });
@@ -87,13 +93,24 @@ export const ConnectionScreen: React.FC<ConnectionScreenProps> = ({ tenantId, in
                             Abra o WhatsApp no seu celular, vá em "Aparelhos Conectados" e aponte a câmera para o QR Code abaixo.
                         </p>
 
-                        <div className="bg-white p-4 rounded-xl inline-block mb-6 min-h-[250px] min-w-[250px] flex items-center justify-center relative">
+                        <div className="bg-white p-6 rounded-xl flex items-center justify-center min-h-[300px] mb-6">
                             {qrCode ? (
-                                <img src={qrCode} alt="WhatsApp QR Code" className="w-64 h-64 object-contain" />
+                                <div className="flex flex-col items-center w-full">
+                                    <img src={qrCode} alt="WhatsApp QR Code" className="w-full h-auto max-w-[260px] mx-auto mb-4" />
+                                    
+                                    {pairingCode && (
+                                        <div className="w-full mt-2 bg-gray-800 border border-gray-700 rounded-xl p-4 flex flex-col items-center">
+                                            <span className="text-sm text-gray-400 mb-1 font-medium">Código de Pareamento</span>
+                                            <div className="text-[22px] font-black tracking-[0.2em] text-emerald-400">
+                                                {pairingCode}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             ) : (
                                 <div className="text-gray-400 flex flex-col items-center">
                                     <RefreshCw className="w-8 h-8 animate-spin mb-2" />
-                                    <span className="text-sm font-medium">Gerando QR Code...</span>
+                                    <span className="text-sm font-medium">Gerando Conexão...</span>
                                 </div>
                             )}
                         </div>

@@ -21,13 +21,40 @@ router.get('/', async (req: Request, res: Response) => {
         const offset = parseInt(req.query.offset as string) || 0;
         const tenants = await ConfigRepository.getAll(limit, offset);
 
-        
+        // Sync em tempo real com Evolution (Fast fetch de /instance/all)
+        // Resolve o problema do painel ficar com status desatualizado pois o webhook vai para o n8n
+        try {
+            const { EvolutionService } = await import('../../external/EvolutionService');
+            const { InstanceRepository } = await import('../../database/repositories/InstanceRepository');
+            const statusMap = await EvolutionService.syncAllInstancesStatus();
+            
+            for (const tenant of tenants) {
+                if (statusMap[tenant.instancia]) {
+                    const isConnected = statusMap[tenant.instancia] === 'CONNECTED';
+                    const newStatus = isConnected ? 'CONNECTED' : 'DISCONNECTED';
+                    
+                    // Atualiza apenas se for diferente
+                    if (tenant.status_conexao !== newStatus) {
+                        tenant.status_conexao = newStatus;
+                        // Atualiza no banco asíncronamente sem travar a requisição
+                        InstanceRepository.updateStatus(tenant.instancia, newStatus).catch(() => {});
+                    }
+                } else if (tenant.status_conexao !== 'PENDING') {
+                    tenant.status_conexao = 'DISCONNECTED';
+                }
+            }
+        } catch(e: any) {
+            console.error('Falha ao sincronizar status ao vivo', e.message);
+        }
+
         // Auto-generate tokens for legacy instances
         for (const tenant of tenants) {
             if (!tenant.connect_token) {
                 const token = await ConfigRepository.generateTokenForLegacy(tenant.instancia);
                 tenant.connect_token = token;
-                tenant.status_conexao = 'PENDING';
+                if (tenant.status_conexao !== 'CONNECTED') {
+                    tenant.status_conexao = 'PENDING';
+                }
             }
         }
         res.json(tenants);
@@ -45,23 +72,8 @@ router.post('/', validate(createTenantSchema), async (req: Request, res: Respons
     try {
         await ConfigRepository.create(tenant, connectToken);
         
-        // Sync advanced settings with Evolution Go
-        if (tenant.instancia) {
-            try {
-                await EvolutionService.createInstance(tenant.instancia);
-                await EvolutionService.updateAdvancedSettings(tenant.instancia, {
-                    alwaysOnline: tenant.sempre_online,
-                    rejectCall: tenant.rejeitar_chamadas,
-                    readMessages: tenant.marcar_lidas,
-                    ignoreGroups: tenant.ignorar_grupos,
-                    ignoreStatus: tenant.ignorar_status
-                });
-            } catch (evoErr: any) {
-                // Compensating action: Se a Evolution falhar criticamente, reverta do banco
-                await ConfigRepository.delete(tenant.instancia);
-                throw new Error(`Falha ao criar na Evolution API. Rollback efetuado. Detalhe: ${evoErr.message}`);
-            }
-        }
+        // We no longer sync with Evolution Go during POST/PUT.
+        // We will sync when the user clicks 'Connect' to avoid creating the instance too early and breaking the pairing code timeout.
 
         res.status(201).json({ message: 'Tenant criado com sucesso', connect_token: connectToken });
     } catch (err: any) {
@@ -78,14 +90,8 @@ router.put('/:instancia', validate(updateTenantSchema), async (req: Request, res
     try {
         await ConfigRepository.update(instancia, tenant);
 
-        // Sync advanced settings with Evolution Go
-        await EvolutionService.updateAdvancedSettings(instancia, {
-            alwaysOnline: tenant.sempre_online,
-            rejectCall: tenant.rejeitar_chamadas,
-            readMessages: tenant.marcar_lidas,
-            ignoreGroups: tenant.ignorar_grupos,
-            ignoreStatus: tenant.ignorar_status
-        });
+        // We no longer sync with Evolution Go during POST/PUT.
+        // We will sync when the user clicks 'Connect' to avoid creating the instance too early and breaking the pairing code timeout.
 
         res.json({ message: 'Tenant atualizado com sucesso' });
     } catch (err: any) {
@@ -98,7 +104,7 @@ router.post('/:instancia/logout', async (req: Request, res: Response) => {
     const { instancia } = req.params;
     try {
         await EvolutionService.logoutInstance(instancia);
-        await ConfigRepository.update(instancia, { status_conexao: 'PENDING' });
+        await ConfigRepository.updateConnectionStatus(instancia, 'PENDING');
         res.json({ message: 'Instância desconectada com sucesso' });
     } catch (err: any) {
         console.error('ERRO LOGOUT:', err.message);

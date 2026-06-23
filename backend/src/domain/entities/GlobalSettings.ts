@@ -10,4 +10,5 @@ export interface GlobalSettings {
     custo_token_saida_admin: number;
     evolution_api_url?: string;
     evolution_api_key?: string;
+    n8n_webhook_url?: string;
 }

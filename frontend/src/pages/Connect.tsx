@@ -105,6 +105,9 @@ export default function Connect() {
                                     <div className="text-[22px] font-black tracking-[0.2em] text-emerald-400">
                                         {pairingCode}
                                     </div>
+                                    {phone && (
+                                        <p className="text-xs text-gray-500 mt-2">Gerado para o número: <strong>+{phone.length <= 11 ? '55'+phone : phone}</strong></p>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -145,7 +148,19 @@ export default function Connect() {
                 {status !== 'connected' && (
                     <div className="flex gap-2">
                         <button 
-                            onClick={() => window.location.reload()}
+                            onClick={() => {
+                                setStatus('loading');
+                                setRequestingPairing(true);
+                                api.get(`/public/whatsapp/qrcode/${instancia}?forcePairing=true${phone ? '&phone='+phone : ''}`)
+                                    .then(res => {
+                                        const data = res.data;
+                                        if (data.base64) setQrCode(data.base64);
+                                        if (data.pairingCode || data.code) setPairingCode(data.pairingCode || data.code);
+                                        setStatus('qr_and_pairing');
+                                    })
+                                    .catch(() => setStatus('error'))
+                                    .finally(() => setRequestingPairing(false));
+                            }}
                             className="flex-1 bg-[#18181b] border border-[#27272a] hover:bg-[#27272a] text-white rounded-xl py-3.5 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
                         >
                             <RefreshCw className="w-4 h-4" />

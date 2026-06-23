@@ -92,7 +92,7 @@ export const ClientList: React.FC<ClientListProps> = ({
                             ${tenant.status_assinatura === 'ativo' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 
                               tenant.status_assinatura === 'inativo' ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 
                               'bg-red-500/10 text-red-500 border border-red-500/20'}`}>
-                            {tenant.status_assinatura.toUpperCase()}
+                            {tenant.status_assinatura?.toUpperCase() || ''}
                           </span>
                         </td>
                         <td className="p-4">
@@ -117,7 +117,7 @@ export const ClientList: React.FC<ClientListProps> = ({
                                 </button>
                             )}
                                 <button onClick={() => {
-                                    const url = `${window.location.origin}/conectar/${tenant.connect_token}`;
+                                    const url = `${window.location.origin}/conectar/${tenant.connect_token}?phone=${tenant.telefone_whatsapp || ''}`;
                                     navigator.clipboard.writeText(url);
                                     alert('Link copiado para a área de transferência!');
                                 }} title="Copiar Link para o Cliente" className="px-3 py-1.5 text-xs text-blue-400 hover:bg-blue-500/20 rounded font-semibold border border-blue-500/30 flex items-center gap-1 transition-all">
