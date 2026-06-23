@@ -45,7 +45,10 @@ app.use(helmet({
     }
 }));
 app.use(cors({
-    origin: process.env.FRONTEND_URL || '*',
+    origin: (origin, callback) => {
+        // Permite qualquer origem dinamicamente (útil para VPS sem configuração rigorosa de .env)
+        callback(null, true);
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-webhook-secret']
 }));
